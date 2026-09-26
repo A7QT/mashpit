@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mashpit — v2 structure view</title>
+<style>
+:root{--bg:#0d0f14;--card:#171a22;--line:#262b38;--txt:#f2f0e8;--dim:#8f96a8;--a:#6ea8ff;--b:#5be39a;--s:#d3a6ff;--x:#ffd34d}
+*{box-sizing:border-box;font-family:system-ui,sans-serif}body{background:radial-gradient(1000px 400px at 20% -10%,#1d2436,transparent),var(--bg);color:var(--txt);margin:0;padding:16px;max-width:1100px}
+header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}h1{font-size:26px;margin:0;letter-spacing:-.02em}h1 span{color:var(--x)}
+.sub{color:var(--dim);font-size:13px}
+#mix{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+#overview{position:relative;height:120px;background:#0a0c11;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
+#overview canvas{position:absolute;inset:0;width:100%;height:100%}
+#ph{position:absolute;top:0;bottom:0;width:2px;background:#ff5d5d}
+#sects{display:flex;gap:6px;margin-top:10px}
+.sect{flex:1;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;background:#10131a;cursor:pointer}
+.sect.on{outline:2px solid var(--x)}.sect b{display:block;font-size:12.5px}.sect span{color:var(--dim)}
+#grid{display:grid;grid-template-columns:250px 1fr 250px;gap:10px;margin-top:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;font-size:13px}
+.card h3{margin:0 0 8px;font-size:12px;letter-spacing:.08em;color:var(--dim)}
+.slot{border:1px dashed #3a4156;border-radius:10px;padding:10px;margin-bottom:8px;font-size:12.5px;min-height:64px}
+.slot.full{border-style:solid}.slot small{color:var(--dim)}
+button{background:#242a3a;color:#fff;border:1px solid #3c4560;border-radius:9px;padding:7px 12px;cursor:pointer;font-size:13px}button:hover{background:#2f3650}button.primary{background:#4d6df5;border-color:#4d6df5}button.small{font-size:11.5px;padding:4px 9px}
+#pad{position:relative;height:220px;background:radial-gradient(circle at 50% 50%,#20263a,#0c0e14);border:1px solid var(--line);border-radius:12px;cursor:crosshair;touch-action:none}
+#dot{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--x);transform:translate(-50%,-50%);box-shadow:0 0 18px var(--x)}
+#padlab{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:4px}
+#transport{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+#time{font-variant-numeric:tabular-nums;font-size:15px}
+.chip{background:#222839;border:1px solid #3c4560;border-radius:14px;padding:4px 10px;font-size:12px;cursor:pointer;margin:2px;display:inline-block}
+#copilotFab{position:fixed;right:18px;bottom:18px;background:var(--x);color:#111;border:none;border-radius:24px;padding:12px 18px;font-weight:800;box-shadow:0 6px 30px rgba(255,211,77,.35)}
+#copilotBox{position:fixed;right:18px;bottom:70px;width:300px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:none;font-size:13px}
+#copilotBox input{width:100%;background:#0a0c11;border:1px solid var(--line);color:#fff;border-radius:8px;padding:8px;margin:6px 0}
+#log{margin-top:8px;font-size:12px;color:var(--dim)}
+</style></head>
+<body>
+<header><h1>mash<span>pit</span> <span style="font-size:13px;color:var(--dim)">v2 · structure</span></h1>
+<span class="sub">same engine, different brain: arrange by <b>moments</b>, not tracks.</span></header>
+
+<div id="mix">
+  <div id="overview"><canvas id="ov"></canvas><div id="ph" style="left:0%"></div></div>
+  <div id="sects">
+    <div class="sect on" data-s="0"><b>Intro · A</b><span>0:00 – 0:13 · A alone</span></div>
+    <div class="sect" data-s="13"><b>Blend · 0:21</b><span>0:13 – 0:29 · the magic</span></div>
+    <div class="sect" data-s="29"><b>Drop · B</b><span>0:29 – 0:45 · B + samples</span></div>
+  </div>
+  <div id="transport">
+    <button id="play" class="primary">▶ play</button><button id="stop">■</button>
+    <div id="time">0:00 / 0:45</div>
+    <label style="font-size:12px">BPM <input id="bpm" type="number" value="128" style="width:58px;background:#0a0c11;color:#fff;border:1px solid var(--line);border-radius:6px;padding:4px"></label>
+    <button id="export">⤓ export</button>
+    <span class="sub" id="statline">A 124→128 🔒 · B 132→128 🔒 · xfade 8 bars</span>
+  </div>
+</div>
+
+<div id="grid">
+  <div class="card"><h3>CRATE · drop files</h3>
+    <div class="slot" id="slotA"><b style="color:var(--a)">A · music</b><br><small id="nameA">demo hum — drop audio to replace</small><br><button class="small" id="loadA">load</button> <button class="small" id="syncA">sync</button></div>
+    <div class="slot" id="slotB"><b style="color:var(--b)">B · music</b><br><small id="nameB">demo hum — drop audio to replace</small><br><button class="small" id="loadB">load</button> <button class="small" id="syncB">sync</button></div>
+    <div class="slot"><b style="color:var(--s)">SAMPLES</b><br><small>files land here as chips — click to fire</small><div id="pool"></div><button class="small" id="loadS">+ add</button></div>
+    <input id="file" type="file" accept="audio/*" multiple hidden>
+  </div>
+  <div class="card"><h3>BLEND PAD · x = who, y = brightness</h3>
+    <div id="pad"><div id="dot" style="left:50%;top:55%"></div></div>
+    <div id="padlab"><span>◀ A</span><span>bright ▲ · dark ▼</span><span>B ▶</span></div>
+    <div style="margin-top:8px;font-size:12px;color:var(--dim)" id="padval">xfade 50 · filter open</div>
+  </div>
+  <div class="card"><h3>MOMENT</h3>
+    <div id="moment"><b>Blend · 0:21</b><p style="color:var(--dim);font-size:12.5px">This is where A hands off to B. Pad left = A, right = B. Push up for energy, down to smooth it out.</p>
+    <button class="small primary" id="smoothBtn">smooth this moment</button>
+    <button class="small" id="swapBtn">swap A/B</button></div>
+  </div>
+</div>
+
+<button id="copilotFab">✨ copilot</button>
+<div id="copilotBox"><b>copilot</b><div style="color:var(--dim);font-size:12px">suggests only. you decide.</div>
+<input id="prompt" value="transition at 0:21 feels abrupt"><button id="ask" class="primary">ask</button><div id="sug" style="margin-top:6px;color:var(--dim)">…</div></div>
+<div id="log">v2 kept demo.html untouched. click overview to seek · drag on pad to perform · drop audio into crate.</div>
+
+<script>
+const DUR=45;const S={bpm:128,t:0,xf:.5,fl:.7,xfade:{at:21,bars:8},
+ A:{name:'a (demo)',buf:null,ratio:128/124},B:{name:'b (demo)',buf:null,ratio:128/132},samples:[]};
+const $=id=>document.getElementById(id),fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+let AC=null,master=null,live=[],nodes={};
+function ov(){const c=$('ov'),x=c.getContext('2d');c.width=c.offsetWidth*2||1000;c.height=240;const W=c.width,H=c.height;
+ x.clearRect(0,0,W,H);let sd=5;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+ const colAt=t=>t<13?'rgba(110,168,255,.6)':t<29?'rgba(255,211,77,.7)':'rgba(91,227,154,.6)';
+ for(let px=0;px<W;px++){const t=px/W*DUR;const h=14+rnd()*H*.5*(t>13&&t<29?1:.6);x.fillStyle=colAt(t);x.fillRect(px,H/2-h/2,2.4,h);}
+ x.fillStyle='rgba(255,211,77,.9)';[13,21,29].forEach(t=>x.fillRect(t/DUR*W,0,2,H));
+ x.fillStyle='#fff';x.font='20px system-ui';x.fillText('0:21 ▼',21/DUR*W-30,24);}
+ov();window.onresize=ov;
+$('overview').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();S.t=(e.clientX-r.left)/r.width*DUR;$('ph').style.left=S.t/DUR*100+'%';$('time').textContent=fmt(S.t)+' / 0:45';};
+document.querySelectorAll('.sect').forEach(s=>s.onclick=()=>{document.querySelectorAll('.sect').forEach(o=>o.classList.remove('on'));s.classList.add('on');S.t=+s.dataset.s;$('ph').style.left=S.t/DUR*100+'%';$('time').textContent=fmt(S.t)+' / 0:45';});
+// pad
+const pad=$('pad'),dot=$('dot');let drag=false;
+function setPad(e){const r=pad.getBoundingClientRect();const px=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),py=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));
+ S.xf=px;S.fl=1-py;dot.style.left=px*100+'%';dot.style.top=py*100+'%';
+ $('padval').textContent=`xfade ${Math.round(px*100)} · ${py<.35?'dark/smooth':py>.65?'bright/energy':'open'}`;}
+pad.addEventListener('pointerdown',e=>{drag=true;setPad(e)});window.addEventListener('pointermove',e=>{if(drag)setPad(e)});window.addEventListener('pointerup',()=>drag=false);
+// files
+let tgt='A';const pick=t=>{tgt=t;$('file').click();};
+$('loadA').onclick=()=>pick('A');$('loadB').onclick=()=>pick('B');$('loadS').onclick=()=>pick('S');
+$('file').onchange=e=>{[...e.target.files].forEach(f=>loadF(f,tgt));e.target.value='';};
+['slotA','slotB'].forEach((id,i)=>{const el=$(id);el.ondragover=e=>e.preventDefault();el.ondrop=e=>{e.preventDefault();[...e.dataTransfer.files].forEach(f=>loadF(f,i?'B':'A'));};});
+async function loadF(f,t){AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+ const buf=await AC.decodeAudioData(await f.arrayBuffer()).catch(()=>null);if(!buf){$('log').textContent='nope: '+f.name;return;}
+ if(t==='A'){S.A={name:f.name,buf,ratio:S.A.ratio};$('nameA').textContent=f.name;$('slotA').classList.add('full');}
+ else if(t==='B'){S.B={name:f.name,buf,ratio:S.B.ratio};$('nameB').textContent=f.name;$('slotB').classList.add('full');}
+ else{S.samples.push({name:f.name,buf});const c=document.createElement('span');c.className='chip';c.textContent='▶ '+f.name;
+  c.onclick=()=>fireSample({name:f.name,buf});$('pool').appendChild(c);}
+ $('log').textContent=`loaded ${f.name} → ${t} ✓`;ov();}
+function fireSample(s){if(!AC||!master)return;const src=AC.createBufferSource();src.buffer=s.buf;src.connect(master);src.start();live.push(src);$('log').textContent=`fired ${s.name} 🥁`;}
+$('syncA').onclick=()=>{S.A.ratio=S.bpm/124;$('log').textContent='A synced 🔒';};
+$('syncB').onclick=()=>{S.B.ratio=S.bpm/132;$('log').textContent='B synced 🔒';};
+$('smoothBtn').onclick=()=>{S.xfade.bars=8;S.xf=.5;S.fl=.35;dot.style.left='50%';dot.style.top='65%';$('statline').textContent=`A 124→${S.bpm} 🔒 · B 132→${S.bpm} 🔒 · xfade 8 bars`;ov();$('log').textContent='moment smoothed: 8 bars, pad drifting down-dark ✓';};
+$('swapBtn').onclick=()=>{const a={...S.A};S.A={...S.B};S.B=a;$('nameA').textContent=S.A.name;$('nameB').textContent=S.B.name;$('log').textContent='swapped A↔B 🔀';};
+$('bpm').onchange=e=>{S.bpm=+e.target.value||128;};
+// transport: A 0–29, B 13–45, samples free
+$('play').onclick=async()=>{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume();
+ live.forEach(s=>{try{s.stop()}catch(e){}});live=[];master=AC.createGain();master.gain.value=.9;
+ const flt=AC.createBiquadFilter();flt.type='lowpass';flt.frequency.value=400+S.fl*16000;flt.connect(master).connect(AC.destination);
+ setInterval(()=>flt.frequency.value=400+S.fl*16000,200);
+ const t0=AC.currentTime+.05,st=S.t;nodes={t0,st};$('play').textContent='⏸ playing';
+ const put=(buf,at,dur,rate)=>{if(!buf)return;const src=AC.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;
+  const g=AC.createGain();const id=buf===S.A.buf?'a':'b';
+  const xf=id==='a'?()=>Math.cos(S.xf*Math.PI/2):()=>Math.cos((1-S.xf)*Math.PI/2);
+  const gg=AC.createGain();src.connect(g).connect(gg).connect(flt);g.gain.value=.9;
+  setInterval(()=>gg.gain.value=xf(),200);
+  try{src.start(t0+Math.max(0,at-S.t),Math.max(0,S.t-at),dur);}catch(e){}live.push(src);};
+ if(S.A.buf)put(S.A.buf,0,29,1/S.A.ratio);if(S.B.buf)put(S.B.buf,13,32,1/S.B.ratio);
+ S.samples.forEach(c=>{if(c.buf){const src=AC.createBufferSource();src.buffer=c.buf;src.connect(flt);try{src.start(t0+Math.max(0,0),0);}catch(e){}live.push(src);}});
+ const tick=()=>{if(!$('play').textContent.includes('playing'))return;S.t=st+(AC.currentTime-t0);
+  if(S.t>=DUR){$('stop').onclick();return;}$('time').textContent=fmt(S.t)+' / 0:45';$('ph').style.left=S.t/DUR*100+'%';requestAnimationFrame(tick);};tick();};
+$('stop').onclick=()=>{live.forEach(s=>{try{s.stop()}catch(e){}});live=[];S.t=0;$('play').textContent='▶ play';$('time').textContent='0:00 / 0:45';$('ph').style.left='0%';};
+$('export').onclick=()=>$('log').textContent='export → lmms render later ✓';
+// copilot fab
+$('copilotFab').onclick=()=>{const b=$('copilotBox');b.style.display=b.style.display==='block'?'none':'block';};
+$('ask').onclick=()=>{const p=$('prompt').value.toLowerCase();
+ $('sug').innerHTML=p.includes('abrupt')||p.includes('0:21')?`💡 try pad slightly left-of-center + low for 8 bars. <button class="small" id="ap">do it</button>`:`💡 got you — hit <b>smooth this moment</b> on the right.`;
+ const ap=$('ap');if(ap)ap.onclick=()=>{$('smoothBtn').onclick();$('sug').textContent='done ✓';$('copilotBox').style.display='none';};};
+</script></body></html>

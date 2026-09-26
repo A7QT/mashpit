@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mashpit — tool</title>
+<style>
+:root{--bg:#1a1d23;--bg2:#22262f;--bg3:#2a2f3a;--line:#3a4152;--txt:#d7dae0;--dim:#8b93a5;--acc:#e0a100;--a:#5b9dff;--b:#4ed07e;--red:#e05252}
+*{box-sizing:border-box;font-family:"Segoe UI",system-ui,sans-serif;font-size:12px}
+body{background:var(--bg);color:var(--txt);margin:0;padding:0}
+.mono{font-family:Consolas,Menlo,monospace}
+/* menubar */
+#menu{display:flex;gap:2px;background:var(--bg2);border-bottom:1px solid var(--line);padding:2px 8px}
+#menu button{background:none;border:none;color:var(--txt);padding:4px 10px;border-radius:0;cursor:pointer}
+#menu button:hover{background:var(--bg3)}
+/* toolbar */
+#tb{display:flex;gap:6px;align-items:center;background:var(--bg2);border-bottom:1px solid var(--line);padding:5px 8px;flex-wrap:wrap}
+#tb .grp{display:flex;gap:4px;align-items:center;border-right:1px solid var(--line);padding-right:8px;margin-right:2px}
+#tb button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:4px 10px;color:var(--txt)}
+#tb button:hover{background:#343b4b}#tb button.on{background:#4a3a10;border-color:var(--acc);color:var(--acc)}
+#time{background:#0d0f13;border:1px solid var(--line);padding:4px 10px;font-family:Consolas,monospace;font-size:14px;min-width:170px;text-align:center}
+#tb input[type=number]{background:#0d0f13;border:1px solid var(--line);color:var(--txt);padding:3px;width:56px;font-family:Consolas,monospace}
+/* decks — mixxx-style booth */
+#decks{display:grid;grid-template-columns:1fr 148px 1fr;border-bottom:1px solid var(--line);background:#1e2129}
+.deck{padding:5px 7px;background:var(--bg2)}.deck:first-child{border-right:1px solid var(--line)}
+.deck .dtop{display:flex;gap:6px;align-items:center}
+.fxbadges{display:flex;gap:2px}.fxbadges b{font-size:9px;padding:1px 4px;border:1px solid #2f6b2f;color:#3f7a3f;border-radius:2px;font-weight:700}
+.fxbadges b.lit{background:#2f9e2f;border-color:#2f9e2f;color:#041204}
+.deck .fname{font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.deck .dtime{font-size:11px;color:var(--dim);white-space:nowrap}
+.deck .dbody{display:grid;grid-template-columns:86px 1fr 52px;gap:7px;margin-top:4px}
+.deck canvas.wave{width:100%;height:56px;background:#0d0f13;border:1px solid var(--line);display:block;margin:0 0 4px}
+.jog{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 50% 42%,#343947 0 18%,#23262f 19% 58%,#14161c 59%);border:2px solid #454b5e;position:relative;cursor:grab;touch-action:none;margin:0 auto}
+.jog:active{cursor:grabbing;border-color:var(--acc)}
+.jog .mark{position:absolute;inset:0;transform:rotate(var(--rot,0deg))}
+.jog .mark::before{content:"";position:absolute;left:50%;top:3px;width:3px;height:16px;background:#e8eaf0;border-radius:2px;transform:translateX(-50%)}
+.dtransport{display:flex;gap:4px;margin-top:4px}
+.dtransport button{flex:1;background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:4px 0;color:var(--txt);font-size:11px;font-weight:700}
+.deck .ctlrow{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.deck .ctlrow button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:3px 7px;color:var(--txt);font-size:11px}
+.deck .ctlrow .hb{font-weight:800;min-width:26px}
+.deck .ctlrow .trim{flex:1;min-width:60px;display:flex;gap:4px;align-items:center;color:var(--dim);font-size:10px}
+.deck .ctlrow .trim input{flex:1}
+.deck .readouts{display:flex;gap:8px;margin:3px 0;color:var(--dim);font-size:10px}
+.deck .readouts b{color:var(--txt);font-family:Consolas,monospace;font-weight:400}
+.deck input[type=number]{background:#0d0f13;border:1px solid var(--line);color:var(--txt);padding:2px;width:64px;font-family:Consolas,monospace;font-size:11px}
+button.on{background:#4a3a10 !important;border-color:var(--acc) !important;color:var(--acc) !important}
+.deck .bigger{font-size:13px;font-weight:800;padding:5px 0}
+.deck .eq3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:4px}
+.deck .keyrow{display:flex;gap:4px;margin-top:4px;align-items:center}
+.deck .keyrow button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:2px 6px;color:var(--txt);font-size:10px}
+.deck .keyrow .mono{min-width:44px;text-align:center;font-size:11px}
+.deck .sendrow{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:10px;color:var(--dim)}
+.deck .sendrow input{flex:1}
+.deck .sendrow .mono{font-size:10px;min-width:30px;text-align:right}
+.deck .eq3 label{color:var(--dim);font-size:10px;display:flex;flex-direction:column;gap:1px}
+.deck .eq3 label b{color:var(--txt);font-family:Consolas,monospace;font-size:10px}
+.deck .eq3 input{width:100%}
+.deck .cues{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:4px}
+.deck .dtop{display:flex;gap:6px;align-items:center}
+.deck .fname{font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.deck .dtime{font-size:11px;color:var(--dim);white-space:nowrap}
+.deck .dbody{display:grid;grid-template-columns:88px 1fr 54px;gap:7px;margin-top:4px}
+.deck .dleft{display:flex;flex-direction:column;align-items:center}
+.deck .dmid{min-width:0}
+.deck .ctlrow{display:flex;gap:4px;align-items:center}
+.deck .ctlrow .hb{font-weight:800;min-width:26px}
+.deck .ctlrow .trim{flex:1;min-width:56px;display:flex;gap:4px;align-items:center;color:var(--dim);font-size:10px}
+.deck .ctlrow .trim input{flex:1;min-width:0}
+.deck .readouts{display:flex;gap:10px;margin:3px 0;color:var(--dim);font-size:10px}
+.deck .readouts b{color:var(--txt);font-family:Consolas,monospace;font-weight:400}
+.deck .looprow{display:flex;gap:3px;margin-top:4px;align-items:center}
+.deck .looprow span{color:var(--dim);font-size:10px}
+.deck .looprow button{flex:1;background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:4px 0;color:var(--txt);font-size:10px}
+.deck .cues button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:4px 0;color:var(--txt);font-size:10px}
+.deck.A{box-shadow:inset 0 0 24px rgba(91,157,255,.10)}
+.deck.B{box-shadow:inset 0 0 24px rgba(78,208,126,.10)}
+.deck .dright{display:flex;flex-direction:column;align-items:center;gap:3px}
+.deck .ratepct{font-size:11px}
+.deck .dright input[type=range]{writing-mode:vertical-lr;direction:rtl;height:118px;width:22px;accent-color:#e8720c}
+.deck .dright .bendrow{display:flex;gap:2px}
+.deck .dright .bendrow button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;color:var(--txt);padding:1px 6px;font-size:11px}
+.deck .dright .klock{font-size:9px;padding:3px 2px;width:100%}
+/* center booth mixer */
+#boothmix{background:#1e2129;border-left:1px solid var(--line);border-right:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:5px;align-items:stretch;font-size:10px;color:var(--dim)}
+#boothmix .bmtitle{text-align:center;letter-spacing:.1em;font-weight:700;font-size:9px}
+#vu{width:100%;height:64px;background:#0d0f13;border:1px solid var(--line);display:block}
+#boothmix input[type=range]{width:100%}
+#boothmix .xrow{display:flex;gap:4px;align-items:center}
+#boothmix .xrow input{flex:1;accent-color:#e8720c}
+#boothmix .mono{font-size:10px;text-align:center}
+#boothmix button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;color:var(--txt);padding:3px 0;font-size:10px}
+/* timeline */
+#mid{display:grid;grid-template-columns:220px 1fr 150px;min-height:300px}
+#heads{background:var(--bg2);border-right:1px solid var(--line)}
+.th{border-bottom:1px solid var(--line);padding:6px 8px;height:92px}
+.th .nm{font-weight:700}.th.A .nm{color:var(--a)}.th.B .nm{color:var(--b)}.th.S .nm{color:#c79bff}
+.th .ctl{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}
+.th button{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:2px 7px;color:var(--txt);font-size:11px}
+.th button.on{background:#4a3a10;border-color:var(--acc);color:var(--acc)}
+.th input[type=range]{width:80px}
+#tlwrap{position:relative;background:#14161c;overflow:hidden}
+#ruler{height:22px;background:#0d0f13;border-bottom:1px solid var(--line);position:relative;font-family:Consolas,monospace;font-size:10px;color:var(--dim)}
+#ruler span{position:absolute;top:4px}
+.lane{position:relative;height:92px;border-bottom:1px solid var(--line)}
+.clip{position:absolute;top:8px;bottom:8px;border:1px solid #5a6376;background:#2c3342;border-radius:2px;cursor:move;overflow:hidden}
+.clip.A{background:rgba(91,157,255,.22);border-color:var(--a)}.clip.B{background:rgba(78,208,126,.20);border-color:var(--b)}.clip.S{background:rgba(199,155,255,.20);border-color:#c79bff}
+.clip .t{font-size:10px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,.35)}
+.clip .fade{position:absolute;top:0;bottom:0;width:10px;cursor:ew-resize;background:rgba(224,161,0,.25)}
+.clip .fade.l{left:0}.clip .fade.r{right:0}
+.clip .x{position:absolute;bottom:2px;right:4px;font-size:10px;color:var(--dim);cursor:pointer}
+.xfade{position:absolute;top:0;bottom:0;border-left:1px dashed var(--acc);border-right:1px dashed var(--acc);background:rgba(224,161,0,.08);pointer-events:none;font-size:10px;color:var(--acc)}
+#ph{position:absolute;top:0;bottom:0;width:1px;background:var(--red);z-index:9;pointer-events:none}
+/* mixer */
+#mix{background:var(--bg2);border-left:1px solid var(--line);display:flex;gap:8px;padding:8px;justify-content:space-around}
+.strip{display:flex;flex-direction:column;align-items:center;gap:4px}
+.strip .fader{writing-mode:vertical-lr;direction:rtl;height:150px}
+.strip .db{font-family:Consolas,monospace;font-size:11px}
+/* console */
+#bot{display:grid;grid-template-columns:1fr 210px 220px 300px;border-top:1px solid var(--line);height:196px}
+#log{background:#0d0f13;padding:6px 8px;overflow-y:auto;font-family:Consolas,monospace;font-size:11px;color:#aeb6c6}
+#rack{background:var(--bg2);border-left:1px solid var(--line);padding:6px 8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+#rack .rt{color:var(--dim);font-size:10px;letter-spacing:.08em;font-weight:700}
+#rack label{color:var(--dim);font-size:11px;display:flex;flex-direction:column;gap:2px}
+#rack label b{color:var(--txt);font-family:Consolas,monospace;font-size:10px}
+#rack input[type=range]{width:100%}
+#poolpanel{background:var(--bg2);border-left:1px solid var(--line);padding:6px 8px;overflow-y:auto}
+#poolpanel .rt{color:var(--dim);font-size:10px;letter-spacing:.08em;font-weight:700}
+.chip{display:flex;gap:4px;align-items:center;background:var(--bg3);border:1px solid var(--line);border-radius:4px;padding:3px 5px;margin-top:4px;font-size:11px}
+.chip .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip button{padding:1px 6px;font-size:10px}
+#log .ok{color:var(--b)}#log .warn{color:var(--acc)}#log .err{color:var(--red)}
+#copilot{background:var(--bg2);border-left:1px solid var(--line);padding:6px 8px;display:flex;flex-direction:column;gap:5px}
+#copilot input{background:#0d0f13;border:1px solid var(--line);color:var(--txt);padding:6px;font-family:Consolas,monospace}
+#status{background:var(--bg2);border-top:1px solid var(--line);padding:3px 8px;color:var(--dim);display:flex;gap:16px;font-size:11px}
+.kbd-hint{color:var(--dim)}
+button[title],input[title],.lane[title],canvas[title]{cursor:help}
+#tipbar{background:#14161c;border-bottom:1px solid var(--line);padding:3px 8px;color:var(--dim);font-size:11px}
+#tipbar b{color:var(--acc)}
+</style></head>
+<body>
+<div id="menu"><button title="File: new / open / save project (stub in demo)">File</button><button title="Edit: undo, clip ops (stub in demo — use the undo button in copilot)">Edit</button><button title="View: layout toggles (stub in demo)">View</button><button title="Render: same as the Render mix… button — bounce to WAV">Render</button><button title="Help: hover anything for a tooltip; that IS the manual">Help</button><span style="flex:1"></span><span style="color:var(--dim);padding:4px" title="Engine credits: Mixxx DJ engine for tempo/key + LMMS for timeline/render">mashpit 0.1 · mixxx 2.5.6 engine · lmms 1.2.2 render</span></div>
+<div id="tipbar">Hover anything for a tooltip. <b>Flow:</b> Load A + Load B → SYNC both decks → drag clips on the timeline → X fader blends → Render mix… exports.</div>
+<div id="tb">
+  <div class="grp"><button id="play" title="Start/stop playback from the red playhead (Spacebar works too)">Play</button><button id="stop" title="Stop and jump the playhead back to 0:00">Stop</button><button id="rec" title="Arm recording (mock in this demo — real bounce comes from Render mix)">Rec</button></div>
+  <div class="grp"><span id="time" class="mono" title="Playhead position / total length. Click the ruler or a waveform to seek">00:00.0 / 00:45</span></div>
+  <div class="grp"><span title="Master tempo. Decks stretch to match this when you hit SYNC">Master</span><input id="bpm" type="number" value="128" title="Master tempo in BPM — the boss tempo both decks follow after SYNC"><span>BPM</span><button id="snap" class="on" title="Snap: dragged clips jump to the nearest beat instead of landing anywhere">Snap</button><button id="quant" class="on" title="Quantize: hot-cue jumps and seeks land exactly on a beat">Quant</button></div>
+  <div class="grp"><button id="loadA" title="Load an audio file into Deck A (or drop a file straight onto lane A)">Load A</button><button id="loadB" title="Load an audio file into Deck B (or drop a file straight onto lane B)">Load B</button><button id="loadS" title="Add one or more samples (drums, shouts, FX) to the samples lane">+ Sample</button><input id="file" type="file" accept="audio/*" multiple hidden></div>
+  <div class="grp"><button id="export" style="border-color:var(--acc);color:var(--acc)" title="Bounce the full 45s mix to WAV (in the real build this runs: lmms render mashup.mmp -f wav)">Render mix…</button></div>
+</div>
+
+<div id="decks">
+  <div class="deck A">
+    <div class="dtop"><span class="fxbadges"><b class="lit">FX1</b><b>FX2</b></span><span class="fname" id="fnameA" title="Loaded file. Use Load A / eject, or drop audio onto lane A">a.mp3 (demo)</span><span class="dtime mono" id="timeA" title="Elapsed / remaining inside Deck A's clip">00:00 / 00:29</span><button id="ejectA" title="Unload the file from Deck A">⏏</button></div>
+    <canvas class="wave" id="waveA" title="Waveform + beat grid (white lines = beats, tall = bar). Red line = playhead"></canvas>
+    <div class="dbody">
+      <div class="dleft">
+        <div class="jog" id="jogA" title="Jog wheel: drag while paused to seek, drag while playing to pitch-bend like touching vinyl (springs back on release)"><div class="mark"></div></div>
+        <div class="dtransport"><button id="cueA" title="CUE: jump back to the start of Deck A's clip">CUE</button><button id="deckPlayA" title="Play/stop the whole mix (both decks share one transport in this demo)">▶</button></div>
+      </div>
+      <div class="dmid">
+        <div class="ctlrow" title="Deck A channel: cue routing, gain trim, file tempo, sync">
+          <button class="hb" data-h="a" title="H (headphone/PFL): cue Deck A — hear it alone">H</button><button class="hb on" data-main="a" title="M (main): Deck A goes to the main mix. Click to pull it out">M</button>
+          <span class="trim">GAIN <input id="trimA" type="range" min="0" max="200" value="100" title="Deck A gain trim 0–200%, pre-EQ (Mixxx GAIN knob)"></span>
+          <input id="filebpmA" type="number" value="124" step="0.01" title="File tempo. Edit me, then hit SYNC. Cleared to ? when you load a new file">
+          <button id="syncA" class="bigger" title="Match Deck A to master BPM and turn keylock on. The one button that does 'make both match bpm'">SYNC</button>
+        </div>
+        <div class="readouts"><span title="Playback speed multiplier. 1.0320 = playing 3.2% fast to hit master tempo">ratio <b id="ratioA">1.0000</b></span><span title="Musical key (Camelot) plus your semitone shift">key <b>8A <span id="keyAv" title="Key shift in semitones. Needs keylock ON to hold tempo while shifted">+0 st</span></b></span></div>
+        <div class="cues"><button data-cue="a" data-i="0" title="Hot cue 1: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">1</button><button data-cue="a" data-i="1" title="Hot cue 2: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">2</button><button data-cue="a" data-i="2" title="Hot cue 3: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">3</button><button data-cue="a" data-i="3" title="Hot cue 4: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">4</button><button data-cue="a" data-i="4" title="Hot cue 5: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">5</button><button data-cue="a" data-i="5" title="Hot cue 6: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">6</button><button data-cue="a" data-i="6" title="Hot cue 7: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">7</button><button data-cue="a" data-i="7" title="Hot cue 8: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">8</button></div>
+        <div class="looprow"><span title="Beatloop: loop N beats from the playhead (whole mix loops in this demo). Click the lit size again to release">LOOP</span><button id="loopA1" title="Loop 1 beat from the playhead">1</button><button id="loopA2" title="Loop 2 beats from the playhead">2</button><button id="loopA4" title="Loop 4 beats from the playhead">4</button><button id="loopA8" title="Loop 8 beats from the playhead">8</button></div>
+        <div class="keyrow" title="Key = pitch WITHOUT tempo (Mixxx KeyControl). Jumps move the playhead by beats">
+          <button id="keyAm" title="Key down 1 semitone, tempo unchanged (±6 max)">KEY−</button><button id="keyAp" title="Key up 1 semitone, tempo unchanged (±6 max)">KEY+</button>
+          <span style="flex:1"></span>
+          <button id="jumpAm4" title="Beatjump back 4 beats (quantized if Quant is on)">−4</button><button id="jumpAm1" title="Beatjump back 1 beat">−1</button><button id="jumpAp1" title="Beatjump forward 1 beat">+1</button><button id="jumpAp4" title="Beatjump forward 4 beats">+4</button>
+        </div>
+        <div class="eq3" title="Deck A 3-band EQ — cuts/boosts live while playing, just like a DJ mixer">
+          <label>LOW <b id="eqAlowV">+0</b><input id="eqAlow" type="range" min="-12" max="12" step="1" value="0" title="Low EQ ±12dB — kill the bass of A to make room for B in the blend"></label>
+          <label>MID <b id="eqAmidV">+0</b><input id="eqAmid" type="range" min="-12" max="12" step="1" value="0" title="Mid EQ ±12dB — vocals live here"></label>
+          <label>HIGH <b id="eqAhiV">+0</b><input id="eqAhi" type="range" min="-12" max="12" step="1" value="0" title="High EQ ±12dB — hats and air"></label>
+        </div>
+        <div class="sendrow" title="FX send: how much of Deck A feeds the dub echo in the rack below (post-fader, dotted-8th)">FX SEND <input id="sendA" type="range" min="0" max="100" value="0" title="Echo send 0–100%"><span class="mono" id="sendAv">0%</span></div>
+      </div>
+      <div class="dright">
+        <div class="ratepct mono" id="pitchvA" title="Pitch adjustment from the rate slider">+0.00%</div>
+        <input id="pitchA" type="range" min="92" max="108" step="0.01" value="100" title="Rate slider 92–108% (Mixxx pitch fader). 100 = normal speed">
+        <div class="bendrow"><button id="nudgeAm" title="Nudge tempo slightly slower (manual beatmatch correction)">−</button><button id="nudgeAp" title="Nudge tempo slightly faster (manual beatmatch correction)">+</button></div>
+        <button id="lockA" class="klock" title="Keylock: change speed WITHOUT changing pitch (detune compensation live, RubberBand at render)">KEYLOCK OFF</button>
+      </div>
+    </div>
+  </div>
+  <div id="boothmix">
+    <div class="bmtitle">BOOTH MIX</div>
+    <canvas id="vu" title="Master output level, live while playing"></canvas>
+    <label title="Master output volume">MASTER <input id="mstKnob" type="range" min="0" max="120" value="90" title="Master volume 0–120%"></label>
+    <div class="xrow" title="Crossfader (mirrors the X fader below the timeline): LEFT = only A, CENTER = both, RIGHT = only B"><span>A</span><input id="xf2" type="range" min="0" max="100" value="50" title="Crossfader. 50 = middle (both decks audible)"><span>B</span></div>
+    <div class="mono" id="xfv2" title="Which side the crossfader favours">C</div>
+    <button id="autoX2" title="Write an 8-bar automatic crossfade at 0:21 (the 'make the transition smoother' button)">auto 0:21</button>
+  </div>
+  <div class="deck B">
+    <div class="dtop"><span class="fxbadges"><b class="lit">FX1</b><b>FX2</b></span><span class="fname" id="fnameB" title="Loaded file. Use Load B / eject, or drop audio onto lane B">b.mp3 (demo)</span><span class="dtime mono" id="timeB" title="Elapsed / remaining inside Deck B's clip">00:00 / 00:32</span><button id="ejectB" title="Unload the file from Deck B">⏏</button></div>
+    <canvas class="wave" id="waveB" title="Waveform + beat grid (white lines = beats, tall = bar). Red line = playhead"></canvas>
+    <div class="dbody">
+      <div class="dleft">
+        <div class="jog" id="jogB" title="Jog wheel: drag while paused to seek, drag while playing to pitch-bend like touching vinyl (springs back on release)"><div class="mark"></div></div>
+        <div class="dtransport"><button id="cueB" title="CUE: jump back to the start of Deck B's clip">CUE</button><button id="deckPlayB" title="Play/stop the whole mix (both decks share one transport in this demo)">▶</button></div>
+      </div>
+      <div class="dmid">
+        <div class="ctlrow" title="Deck B channel: cue routing, gain trim, file tempo, sync">
+          <button class="hb" data-h="b" title="H (headphone/PFL): cue Deck B — hear it alone">H</button><button class="hb on" data-main="b" title="M (main): Deck B goes to the main mix. Click to pull it out">M</button>
+          <span class="trim">GAIN <input id="trimB" type="range" min="0" max="200" value="100" title="Deck B gain trim 0–200%, pre-EQ (Mixxx GAIN knob)"></span>
+          <input id="filebpmB" type="number" value="132" step="0.01" title="File tempo. Edit me, then hit SYNC. Cleared to ? when you load a new file">
+          <button id="syncB" class="bigger" title="Match Deck B to master BPM and turn keylock on">SYNC</button>
+        </div>
+        <div class="readouts"><span title="Playback speed multiplier. 0.9700 = playing 3% slow to hit master tempo">ratio <b id="ratioB">1.0000</b></span><span title="Musical key (Camelot) plus your semitone shift">key <b>9A <span id="keyBv" title="Key shift in semitones. Needs keylock ON to hold tempo while shifted">+0 st</span></b></span></div>
+        <div class="cues"><button data-cue="b" data-i="0" title="Hot cue 1: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">1</button><button data-cue="b" data-i="1" title="Hot cue 2: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">2</button><button data-cue="b" data-i="2" title="Hot cue 3: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">3</button><button data-cue="b" data-i="3" title="Hot cue 4: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">4</button><button data-cue="b" data-i="4" title="Hot cue 5: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">5</button><button data-cue="b" data-i="5" title="Hot cue 6: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">6</button><button data-cue="b" data-i="6" title="Hot cue 7: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">7</button><button data-cue="b" data-i="7" title="Hot cue 8: first click SETS it at the playhead, next clicks JUMP to it, alt-click clears">8</button></div>
+        <div class="looprow"><span title="Beatloop: loop N beats from the playhead (whole mix loops in this demo). Click the lit size again to release">LOOP</span><button id="loopB1" title="Loop 1 beat from the playhead">1</button><button id="loopB2" title="Loop 2 beats from the playhead">2</button><button id="loopB4" title="Loop 4 beats from the playhead">4</button><button id="loopB8" title="Loop 8 beats from the playhead">8</button></div>
+        <div class="keyrow" title="Key = pitch WITHOUT tempo (Mixxx KeyControl). Jumps move the playhead by beats">
+          <button id="keyBm" title="Key down 1 semitone, tempo unchanged (±6 max)">KEY−</button><button id="keyBp" title="Key up 1 semitone, tempo unchanged (±6 max)">KEY+</button>
+          <span style="flex:1"></span>
+          <button id="jumpBm4" title="Beatjump back 4 beats (quantized if Quant is on)">−4</button><button id="jumpBm1" title="Beatjump back 1 beat">−1</button><button id="jumpBp1" title="Beatjump forward 1 beat">+1</button><button id="jumpBp4" title="Beatjump forward 4 beats">+4</button>
+        </div>
+        <div class="eq3" title="Deck B 3-band EQ — cuts/boosts live while playing, just like a DJ mixer">
+          <label>LOW <b id="eqBlowV">+0</b><input id="eqBlow" type="range" min="-12" max="12" step="1" value="0" title="Low EQ ±12dB — kill the bass of B to make room for A in the blend"></label>
+          <label>MID <b id="eqBmidV">+0</b><input id="eqBmid" type="range" min="-12" max="12" step="1" value="0" title="Mid EQ ±12dB — vocals live here"></label>
+          <label>HIGH <b id="eqBhiV">+0</b><input id="eqBhi" type="range" min="-12" max="12" step="1" value="0" title="High EQ ±12dB — hats and air"></label>
+        </div>
+        <div class="sendrow" title="FX send: how much of Deck B feeds the dub echo in the rack below (post-fader, dotted-8th)">FX SEND <input id="sendB" type="range" min="0" max="100" value="0" title="Echo send 0–100%"><span class="mono" id="sendBv">0%</span></div>
+      </div>
+      <div class="dright">
+        <div class="ratepct mono" id="pitchvB" title="Pitch adjustment from the rate slider">+0.00%</div>
+        <input id="pitchB" type="range" min="92" max="108" step="0.01" value="100" title="Rate slider 92–108% (Mixxx pitch fader). 100 = normal speed">
+        <div class="bendrow"><button id="nudgeBm" title="Nudge tempo slightly slower (manual beatmatch correction)">−</button><button id="nudgeBp" title="Nudge tempo slightly faster (manual beatmatch correction)">+</button></div>
+        <button id="lockB" class="klock" title="Keylock: change speed WITHOUT changing pitch (detune compensation live, RubberBand at render)">KEYLOCK OFF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mid">
+  <div id="heads">
+    <div class="th A"><div class="nm" title="Timeline track for Deck A — the blue clip below is what actually plays/silences">A · music</div><div style="color:var(--dim)">ch 1-2 · 48kHz</div>
+      <div class="ctl"><button data-m="a" title="Mute: silence track A">M</button><button data-s="a" title="Solo: hear ONLY track A (overrides all mutes)">S</button><button data-load="a" title="Load a file into track A">load…</button><input type="range" min="0" max="100" value="90" data-vol="a" title="Track A volume (mirrors the A fader in the mixer)"></div></div>
+    <div class="th B"><div class="nm" title="Timeline track for Deck B — the green clip below is what actually plays/silences">B · music</div><div style="color:var(--dim)">ch 1-2 · 48kHz</div>
+      <div class="ctl"><button data-m="b" title="Mute: silence track B">M</button><button data-s="b" title="Solo: hear ONLY track B (overrides all mutes)">S</button><button data-load="b" title="Load a file into track B">load…</button><input type="range" min="0" max="100" value="90" data-vol="b" title="Track B volume (mirrors the B fader in the mixer)"></div></div>
+    <div class="th S"><div class="nm" title="Samples track: one-shots (horns, drums, shouts). Each chip is its own clip, place anywhere">S · samples</div><div style="color:var(--dim)" id="poolinfo" title="How many sample clips are on the lane">0 items</div>
+      <div class="ctl"><button data-m="s" title="Mute: silence all samples">M</button><button data-s="s" title="Solo: hear ONLY the samples">S</button><button data-load="s" title="Add sample files to the S lane">+ add…</button></div></div>
+  </div>
+  <div id="tlwrap" title="Arrangement: drag clips left/right to move them in time. The dashed gold box is the crossfade zone where A hands over to B"><div id="ruler" title="Time ruler in seconds. This demo is 45 seconds long"></div>
+    <div class="lane" data-lane="a" title="Lane A: holds Deck A's clip. Drag the clip to move it, drop audio files here to load"></div><div class="lane" data-lane="b" title="Lane B: holds Deck B's clip. Overlap with A inside the gold box = the blend"></div><div class="lane" data-lane="s" title="Samples lane: drop audio files here, each becomes a movable clip"></div>
+    <div id="ph" title="Playhead: playback starts from here"></div></div>
+  <div id="mix">
+    <div class="strip" title="Channel A: vertical volume fader for Deck A"><span>A</span><input class="fader" type="range" min="0" max="100" value="90" data-vol="a" title="A volume fader (0 = silent, 100 = full). dB readout below"><span class="db" id="dbA" title="A level in decibels">-0.9dB</span><button data-m="a" class="mono" title="Mute Deck A">M</button></div>
+    <div class="strip" title="Crossfader: LEFT = only A, CENTER = both, RIGHT = only B. Automate the 0:21 blend with 'auto 0:21'"><span style="color:var(--acc)">X</span><input class="fader" id="xf" type="range" min="0" max="100" value="50" title="Crossfader. 50 = middle (both decks audible). Slide live while playing!"><span class="db" id="dbX" title="Shows which side the fader favours: A, C (center) or B">C</span><button id="autoX" title="Write an 8-bar automatic crossfade at 0:21 (the 'make the transition smoother' button)">auto 0:21</button></div>
+    <div class="strip" title="Channel B: vertical volume fader for Deck B"><span>B</span><input class="fader" type="range" min="0" max="100" value="90" data-vol="b" title="B volume fader (0 = silent, 100 = full). dB readout below"><span class="db" id="dbB" title="B level in decibels">-0.9dB</span><button data-m="b" class="mono" title="Mute Deck B">M</button></div>
+  </div>
+</div>
+
+<div id="bot">
+  <div id="log" title="Event console: every action lands here with a timestamp. Newest on top"></div>
+  <div id="rack" title="FX rack: master filter + echo. Both move LIVE while playing">
+    <div class="rt">FX RACK · master</div>
+    <label>FILTER <b id="fxCutV">open</b><input id="fxCut" type="range" min="400" max="18000" step="100" value="18000" title="Master low-pass filter. Slide left to darken the whole mix (classic blend-out move), right for open"></label>
+    <label>ECHO MIX <b id="fxEchoV">0%</b><input id="fxEcho" type="range" min="0" max="60" value="0" title="Dub echo RETURN, dotted-8th at master BPM. Feed it with the per-deck FX SEND knobs up top"></label>
+    <div style="display:flex;gap:4px;align-items:center"><button id="loopClear" title="Release any armed loop and play on">loop: off</button></div>
+  </div>
+  <div id="poolpanel" title="Sample pool: every loaded sample lives here. Audition it, or drop it on the timeline">
+    <div class="rt">SAMPLE POOL</div>
+    <div id="pool"></div>
+  </div>
+  <div id="copilot"><span style="color:var(--dim)" title="The copilot only suggests and runs tiny commands — it never touches audio by itself. Undo always works">COPILOT — local, suggest-only. Commands: <span class="mono">sync, smooth 0:21, gain, help</span></span>
+    <input id="prompt" value="smooth 0:21" spellcheck="false" title="Type a command like 'smooth 0:21' or 'sync', then hit run. 'smooth 0:21' = 8-bar crossfade at 21 seconds"><div style="display:flex;gap:4px"><button id="ask" style="flex:1" title="Run the copilot command above">run</button><button id="undo" title="Step back to before the last change (keeps 20 steps of history)">undo</button></div></div>
+</div>
+<div id="status"><span title="Audio settings: sample rate, buffer size, stretch engine. RubberBand = best quality at export; plain resample for live preview">48kHz · 512spl · RubberBand R3 (render) / linear (monitor)</span><span id="stXfade" title="Current crossfade: length in bars and where it sits">xfade 4 bars @ 0:21</span><span id="stEngine" title="Monitor = plays in your browser now. Render = full-quality offline bounce later">engine: webaudio-monitor / lmms-render</span><span class="kbd-hint" title="Keyboard: Space toggles play, arrow keys nudge tempo, S syncs">space=play · ←/→=nudge · S=sync selected</span></div>
+
+<script>
+const DUR=45;
+const S={bpm:128,t:0,playing:false,xfade:{at:21,bars:4},xf:.5,master:.9,bend:{a:0,b:0},
+ tr:{a:{mute:false,solo:false,vol:.9,trim:1,clip:{s:0,e:29},buf:null,ratio:1,lock:false,bpm:124,key:0,low:0,mid:0,hi:0,cues:{}},
+     b:{mute:false,solo:false,vol:.9,trim:1,clip:{s:13,e:45},buf:null,ratio:1,lock:false,bpm:132,key:0,low:0,mid:0,hi:0,cues:{}},
+     s:{mute:false,solo:false,vol:1}},
+ fx:{cutoff:18000,echo:0},send:{a:0,b:0},loop:{on:false,start:0,end:0},
+ samples:[],pool:[],hist:[]};
+let nodes={fx:{}};
+const $=id=>document.getElementById(id),fmt=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${(t%60).toFixed(1).padStart(4,'0')}`;
+const log=(m,c='')=>{const d=document.createElement('div');if(c)d.className=c;d.textContent=`[${fmt(S.t)}] ${m}`;$('log').prepend(d);};
+log('mashpit 0.1 ready. mixxx engine stubs + lmms render path. drop audio onto lanes.','ok');
+let AC=null,master=null,live=[];
+const secPerBar=()=>60/S.bpm*4;
+
+// waves + ruler + clips
+function wave(id,buf,demoSeed){const c=$(id),x=c.getContext('2d');c.width=c.offsetWidth*2||700;c.height=152;const W=c.width,H=c.height;x.clearRect(0,0,W,H);
+ if(buf){const ch=buf.getChannelData(0),st=Math.max(1,(ch.length/W)|0);x.fillStyle='#7fa8d0';
+  for(let p=0;p<W;p++){let m=0;for(let i=0;i<st;i+=32)m=Math.max(m,Math.abs(ch[(p*st+i)|0]||0));const h=Math.max(1,m*H);x.fillRect(p,H/2-h/2,1.4,h);}}
+ else{let s=demoSeed;const r=()=>(s=(s*16807)%2147483647)/2147483647;x.fillStyle='#4a5468';
+  for(let p=0;p<W;p+=4){const h=6+r()*H*.4;x.fillRect(p,H/2-h/2,2.4,h);}}
+ x.fillStyle='rgba(255,255,255,.14)';const n=S.bpm/60*DUR;for(let b=0;b<n;b++)x.fillRect(b/n*W,0,b%4?1:2,H);
+ x.fillStyle='#e05252';x.fillRect(S.t/DUR*W,0,2,H);}
+function draw(){wave('waveA',S.tr.a.buf,3);wave('waveB',S.tr.b.buf,7);
+ const r=$('ruler');r.innerHTML='';for(let s=0;s<=DUR;s+=s<10?1:5){const e=document.createElement('span');e.style.left=s/DUR*100+'%';e.textContent=(s%5?'·':'0:'+String(s).padStart(2,'0'));r.appendChild(e);}
+ document.querySelectorAll('.lane').forEach(l=>l.querySelectorAll('.clip,.xfade').forEach(e=>e.remove()));
+ const mk=(lane,clip,cls,name)=>{const L=document.querySelector(`.lane[data-lane="${lane}"]`);
+  const el=document.createElement('div');el.className='clip '+cls;el.style.left=clip.s/DUR*100+'%';el.style.width=Math.max(1.5,(clip.e-clip.s)/DUR*100)+'%';
+  el.title=`${name}: drag to move in time. Gold edges = fade in/out handles. x = remove (samples only)`;
+  el.innerHTML=`<div class="t">${name}</div><div class="fade l" title="Fade in handle (visual in demo)"></div><div class="fade r" title="Fade out handle (visual in demo)"></div><div class="x" title="Remove this clip">x</div>`;L.appendChild(el);
+  el.querySelector('.x').onclick=e=>{e.stopPropagation();if(lane==='s')S.samples=S.samples.filter(c=>c!==clip);draw();};
+  drag(el,lane,clip);};
+ mk('a',S.tr.a.clip,'A',$('fnameA').textContent);mk('b',S.tr.b.clip,'B',$('fnameB').textContent);
+ S.samples.forEach(c=>mk('s',c,'S',c.name));
+ const w=S.xfade.bars*secPerBar(),s0=S.xfade.at-w/2;
+ ['a','b'].forEach(l=>{const L=document.querySelector(`.lane[data-lane="${l}"]`);const z=document.createElement('div');z.className='xfade';
+  z.style.left=s0/DUR*100+'%';z.style.width=w/DUR*100+'%';z.textContent=` XF ${S.xfade.bars}b`;L.appendChild(z);});
+ $('ph').style.left=(S.t/DUR*100)+'%';$('time').textContent=`${fmt(S.t)} / 00:45`;
+ $('stXfade').textContent=`xfade ${S.xfade.bars} bars @ 0:${String(S.xfade.at%60).padStart(2,'0')}`;
+ $('ratioA').textContent=S.tr.a.ratio.toFixed(4);$('ratioB').textContent=S.tr.b.ratio.toFixed(4);
+ const cA=S.tr.a.clip,cB=S.tr.b.clip;
+ $('timeA').textContent=`${fmt(Math.max(0,Math.min(cA.e-cA.s,S.t-cA.s)))} / ${fmt(cA.e-cA.s)}`;
+ $('timeB').textContent=`${fmt(Math.max(0,Math.min(cB.e-cB.s,S.t-cB.s)))} / ${fmt(cB.e-cB.s)}`;
+ document.querySelectorAll('[data-m]').forEach(b=>b.classList.toggle('on',S.tr[b.dataset.m].mute));
+ document.querySelectorAll('[data-s]').forEach(b=>b.classList.toggle('on',S.tr[b.dataset.s].solo));
+ document.querySelectorAll('[data-h]').forEach(b=>b.classList.toggle('on',S.tr[b.dataset.h].solo));
+ document.querySelectorAll('[data-main]').forEach(b=>b.classList.toggle('on',!S.tr[b.dataset.main].mute));}
+function drag(el,lane,clip){let sx=0,o=null;el.addEventListener('mousedown',e=>{if(e.target.className.includes('fade')||e.target.className==='x')return;sx=e.clientX;o={...clip};e.preventDefault();});
+ addEventListener('mousemove',e=>{if(!o)return;const W=el.parentElement.offsetWidth,dx=(e.clientX-sx)/W*DUR,len=o.e-o.s;
+  let ns=Math.max(0,Math.min(DUR-len,o.s+dx));clip.s=+ns.toFixed(1);clip.e=+(ns+len).toFixed(1);draw();});
+ addEventListener('mouseup',()=>{if(o){log(`${lane.toUpperCase()} clip → ${clip.s.toFixed(1)}–${clip.e.toFixed(1)}s`);o=null;}});}
+// loading
+let tgt='a';const pick=t=>{tgt=t;$('file').click();};
+['loadA','loadB','loadS'].forEach(id=>$(id).onclick=()=>pick(id.slice(-1).toLowerCase()));
+document.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>pick(b.dataset.load));
+$('file').onchange=e=>{[...e.target.files].forEach((f,i)=>loadF(f,tgt,S.t+i*2));e.target.value='';};
+document.querySelectorAll('.lane').forEach(L=>{L.ondragover=e=>e.preventDefault();L.ondrop=e=>{e.preventDefault();
+ const t=(e.clientX-L.getBoundingClientRect().left)/L.getBoundingClientRect().width*DUR;
+ [...e.dataTransfer.files].forEach((f,i)=>loadF(f,L.dataset.lane,t+i*2));};});
+async function loadF(f,lane,at){AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+ const buf=await AC.decodeAudioData(await f.arrayBuffer()).catch(()=>null);
+ if(!buf){log('decode failed: '+f.name,'err');return;}
+ const d=Math.min(buf.duration,DUR-(at||0));
+ if(lane==='a'){S.tr.a.buf=buf;S.tr.a.clip={s:+(at||0),e:+(at||0)+d};$('fnameA').textContent=f.name;S.tr.a.bpm=null;$('filebpmA').value='';$('filebpmA').placeholder='? BPM';}
+ else if(lane==='b'){S.tr.b.buf=buf;S.tr.b.clip={s:+(at||0),e:+(at||0)+d};$('fnameB').textContent=f.name;S.tr.b.bpm=null;$('filebpmB').value='';$('filebpmB').placeholder='? BPM';}
+ else{S.samples.push({name:f.name,buf,s:+(at||S.t),e:+Math.min(DUR,(at||S.t)+Math.min(8,buf.duration))});S.pool.push({name:f.name,buf});renderPool();$('poolinfo').textContent=S.samples.length+' items';}
+ draw();log(`loaded ${f.name} (${buf.duration.toFixed(1)}s) → ${lane.toUpperCase()}`,'ok');
+ if(lane!=='s')log(`type the file BPM into deck ${lane.toUpperCase()}, then hit SYNC`,'warn');}
+function renderPool(){const p=$('pool');p.innerHTML='';
+ if(!S.pool.length){p.innerHTML='<div style="color:var(--dim);font-size:11px;margin-top:4px">empty — + Sample or drop audio</div>';return;}
+ S.pool.forEach(it=>{const c=document.createElement('div');c.className='chip';
+  c.innerHTML=`<span class="nm" title="${it.name} (${it.buf.duration.toFixed(1)}s) — ▶ auditions now, + places at playhead">${it.name}</span>`;
+  const a=document.createElement('button');a.textContent='▶';a.title='Audition: hear it right now';
+  a.onclick=()=>audition(it);
+  const b=document.createElement('button');b.textContent='@ '+fmt(S.t);b.title='Place on the S lane at the playhead';
+  b.onclick=()=>{S.samples.push({name:it.name,buf:it.buf,s:+S.t.toFixed(1),e:+Math.min(DUR,S.t+Math.min(8,it.buf.duration)).toFixed(1)});$('poolinfo').textContent=S.samples.length+' items';draw();log(`placed ${it.name} @ ${fmt(S.t)}`,'ok');};
+  c.append(a,b);p.appendChild(c);});}
+function audition(it){AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume();
+ const s=AC.createBufferSource();s.buffer=it.buf;const g=AC.createGain();g.gain.value=S.tr.s.vol;
+ s.connect(g).connect(AC.destination);try{s.start();}catch(e){}live.push(s);log(`audition: ${it.name}`);}
+$('ejectA').onclick=()=>{S.tr.a.buf=null;$('fnameA').textContent='— empty —';draw();};
+$('ejectB').onclick=()=>{S.tr.b.buf=null;$('fnameB').textContent='— empty —';draw();};
+// sync / pitch / lock
+const fileBpm=id=>{const v=parseFloat($(id==='a'?'filebpmA':'filebpmB').value);return isFinite(v)&&v>0?v:null;};
+$('filebpmA').onchange=e=>{S.tr.a.bpm=parseFloat(e.target.value)||null;log(`deck A file BPM → ${e.target.value||'?'}`);};
+$('filebpmB').onchange=e=>{S.tr.b.bpm=parseFloat(e.target.value)||null;log(`deck B file BPM → ${e.target.value||'?'}`);};
+const sync=id=>{const t=S.tr[id];const b=t.bpm||fileBpm(id)||(id==='a'?124:132);t.bpm=b;t.ratio=+(S.bpm/b).toFixed(4);t.lock=true;
+ $(id==='a'?'pitchA':'pitchB').value=t.ratio*100;updPitch();draw();log(`deck ${id.toUpperCase()} sync → ${t.ratio} (file ${b} → master ${S.bpm}) keylock ON`,'ok');};
+$('syncA').onclick=()=>sync('a');$('syncB').onclick=()=>sync('b');
+const lock=id=>{const t=S.tr[id];t.lock=!t.lock;$(id==='a'?'lockA':'lockB').textContent=t.lock?'KEYLOCK ON':'KEYLOCK OFF';refreshDetune(id);log(`deck ${id} keylock ${t.lock?'on (tempo holds, pitch free)':'off (pitch follows tempo)'}`);};
+$('lockA').onclick=()=>lock('a');$('lockB').onclick=()=>lock('b');
+// per-deck EQ (live while playing)
+[['a','Alow','Amid','Ahi'],['b','Blow','Bmid','Bhi']].forEach(([id,l,m,h])=>{
+ const wire=(el,key)=>{$(el).oninput=e=>{S.tr[id][key]=+e.target.value;$(el+'V').textContent=(+e.target.value>=0?'+':'')+e.target.value;
+  const n=nodes.fx[id];if(n){n.lo.gain.value=S.tr[id].low;n.mid.gain.value=S.tr[id].mid;n.hi.gain.value=S.tr[id].hi;}};};
+ wire('eq'+l,'low');wire('eq'+m,'mid');wire('eq'+h,'hi');});
+// hot cues: click sets at playhead, click again jumps, alt-click clears
+document.querySelectorAll('[data-cue]').forEach(b=>b.onclick=e=>{
+ const id=b.dataset.cue,i=b.dataset.i,d=S.tr[id];
+ if(e.altKey){delete d.cues[i];b.classList.remove('on');log(`hot ${+i+1} cleared (deck ${id.toUpperCase()})`);return;}
+ if(d.cues[i]==null){d.cues[i]=+S.t.toFixed(1);b.classList.add('on');b.title=`Hot ${+i+1} @ ${fmt(S.t)} — click to jump, alt-click to clear`;log(`hot ${+i+1} set @ ${fmt(S.t)} (deck ${id.toUpperCase()})`,'ok');}
+ else{S.t=d.cues[i];if(S.playing){restart();}draw();log(`hot ${+i+1} → ${fmt(S.t)}`);}});
+function restart(){const at=S.t;stop();S.t=at;play(at,false);}
+// beatloop 1/2/4/8 beats from playhead (whole mix loops in this demo)
+const armLoop=(id,beats)=>{const btn=$('loop'+id.toUpperCase()+beats);
+ const wasOn=S.loop.on&&S.loop.beats===beats;
+ document.querySelectorAll('.looprow button').forEach(b=>b.classList.remove('on'));
+ if(wasOn){S.loop.on=false;$('loopClear').textContent='loop: off';log('loop released');return;}
+ const beat=60/S.bpm;S.loop={on:true,beats,start:+S.t.toFixed(2),end:+(S.t+beats*beat).toFixed(2)};
+ btn.classList.add('on');$('loopClear').textContent=`loop ${beats}b ${fmt(S.loop.start)}–${fmt(S.loop.end)}`;
+ log(`loop ${beats} beats ${fmt(S.loop.start)}–${fmt(S.loop.end)}`,'ok');};
+[['loopA1','a',1],['loopA2','a',2],['loopA4','a',4],['loopA8','a',8],['loopB1','b',1],['loopB2','b',2],['loopB4','b',4],['loopB8','b',8]].forEach(([el,id,n])=>$(el).onclick=()=>armLoop(id,n));
+$('loopClear').onclick=()=>{S.loop.on=false;document.querySelectorAll('.looprow button').forEach(b=>b.classList.remove('on'));$('loopClear').textContent='loop: off';log('loop released');};
+// key shift (semitones, tempo-independent) + beatjump + cue + fx sends
+const detuneFor=(id,rate)=>{const t=S.tr[id];let d=t.key*100;if(t.lock)d-=1200*Math.log2(rate);
+ return Math.max(-2400,Math.min(2400,d));};
+const refreshDetune=id=>{live.forEach(s=>{if(s._deck===id){try{s.detune.value=detuneFor(id,s._rate);}catch(e){}}});};
+const keyShift=(id,delta)=>{const t=S.tr[id];t.key=Math.max(-6,Math.min(6,t.key+delta));
+ $(id==='a'?'keyAv':'keyBv').textContent=(t.key>=0?'+':'')+t.key+' st';refreshDetune(id);
+ log(`deck ${id.toUpperCase()} key ${(t.key>=0?'+':'')+t.key} st${t.lock?' · tempo held':' · keylock OFF: pitch follows tempo'}`);};
+$('keyAm').onclick=()=>keyShift('a',-1);$('keyAp').onclick=()=>keyShift('a',1);
+$('keyBm').onclick=()=>keyShift('b',-1);$('keyBp').onclick=()=>keyShift('b',1);
+const beatjump=(id,n)=>{const beat=60/S.bpm;let nt=S.t+n*beat;
+ if($('quant').classList.contains('on'))nt=Math.round(nt/beat)*beat;
+ S.t=Math.max(0,Math.min(DUR,nt));if(S.playing)restart();else draw();log(`deck ${id.toUpperCase()} ${n>0?'+':''}${n} beats → ${fmt(S.t)}`);};
+[['jumpAm4','a',-4],['jumpAm1','a',-1],['jumpAp1','a',1],['jumpAp4','a',4],['jumpBm4','b',-4],['jumpBm1','b',-1],['jumpBp1','b',1],['jumpBp4','b',4]].forEach(([el,id,n])=>$(el).onclick=()=>beatjump(id,n));
+const cueGo=id=>{S.t=S.tr[id].clip.s;if(S.playing)restart();else draw();log(`deck ${id.toUpperCase()} CUE → ${fmt(S.t)}`);};
+$('cueA').onclick=()=>cueGo('a');$('cueB').onclick=()=>cueGo('b');
+[['sendA','a'],['sendB','b']].forEach(([el,id])=>{$(el).oninput=e=>{S.send[id]=+e.target.value;
+ $(el+'v').textContent=e.target.value+'%';const n=nodes.fx[id];if(n&&n.send)n.send.gain.value=S.send[id]/100*.8;};});
+// booth extras: H/M routing, trim, deck transport, jog wheels, xfade mirror, master, VU
+document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{const t=S.tr[b.dataset.h];t.solo=!t.solo;log(`${b.dataset.h.toUpperCase()} PFL ${t.solo?'on — cued alone':'off'}`);draw();});
+document.querySelectorAll('[data-main]').forEach(b=>b.onclick=()=>{const t=S.tr[b.dataset.main];t.mute=!t.mute;log(`${b.dataset.main.toUpperCase()} main ${t.mute?'OUT':'in'}`);draw();});
+[['trimA','a'],['trimB','b']].forEach(([el,id])=>{$(el).oninput=e=>{S.tr[id].trim=e.target.value/100;const n=nodes.fx[id];if(n&&n.trim)n.trim.gain.value=S.tr[id].trim;};});
+$('deckPlayA').onclick=$('deckPlayB').onclick=()=>$('play').click();
+const applyBend=id=>{live.forEach(s=>{if(s._deck===id){try{s.playbackRate.value=s._rate*(1+S.bend[id]);}catch(e){}}});};
+const jog=id=>{const el=$(id==='a'?'jogA':'jogB');let drag=false,lx=0,rot=0;
+ el.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;try{el.setPointerCapture(e.pointerId);}catch(_){}});
+ el.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-lx;lx=e.clientX;rot=(rot+dx*.8)%360;el.style.setProperty('--rot',rot+'deg');
+  if(!S.playing){S.t=Math.max(0,Math.min(DUR,S.t+dx*.03));draw();}
+  else{S.bend[id]=Math.max(-.25,Math.min(.25,S.bend[id]+dx*.0012));applyBend(id);}});
+ const end=()=>{if(!drag)return;drag=false;
+  const spring=()=>{if(Math.abs(S.bend[id])<.0008){S.bend[id]=0;applyBend(id);return;}S.bend[id]*=.82;applyBend(id);requestAnimationFrame(spring);};spring();};
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);};
+jog('a');jog('b');
+const setXf=v=>{S.xf=v;$('xf').value=v*100;$('xf2').value=v*100;
+ const side=v<.45?'A':v>.55?'B':'C';$('dbX').textContent=side;$('xfv2').textContent=side;};
+$('xf2').oninput=e=>setXf(e.target.value/100);
+$('mstKnob').oninput=e=>{S.master=e.target.value/100;if(nodes.master)nodes.master.gain.value=S.master;};
+function vuDraw(){const c=$('vu');if(!c||!nodes.an)return;
+ const W2=c.offsetWidth*2||260;if(c.width!==W2)c.width=W2;if(c.height!==128)c.height=128;
+ const x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);
+ const a=new Uint8Array(nodes.an.fftSize);nodes.an.getByteTimeDomainData(a);
+ let peak=0;for(let i=0;i<a.length;i+=4)peak=Math.max(peak,Math.abs(a[i]-128)/128);
+ const n=22,bw=W/n;
+ for(let i=0;i<n;i++){const wob=0.55+0.45*Math.abs(Math.sin(i*1.7+S.t*7));const h=Math.max(2,Math.min(H,peak*H*wob));
+  x.fillStyle=peak>.9?'#e05252':peak>.65?'#e0a100':'#4ed07e';x.fillRect(i*bw+1,H-h,bw-2,h);}}
+function updPitch(){const a=$('pitchA').value/100,b=$('pitchB').value/100;S.tr.a.ratio=a;S.tr.b.ratio=b;
+ $('pitchvA').textContent=(a>=1?'+':'')+((a-1)*100).toFixed(2)+'%';$('pitchvB').textContent=(b>=1?'+':'')+((b-1)*100).toFixed(2)+'%';draw();}
+$('pitchA').oninput=updPitch;$('pitchB').oninput=updPitch;
+$('nudgeAm').onclick=()=>{$('pitchA').value=+$('pitchA').value-0.05;updPitch();};
+$('nudgeAp').onclick=()=>{$('pitchA').value=+$('pitchA').value+0.05;updPitch();};
+$('nudgeBm').onclick=()=>{$('pitchB').value=+$('pitchB').value-0.05;updPitch();};
+$('nudgeBp').onclick=()=>{$('pitchB').value=+$('pitchB').value+0.05;updPitch();};
+$('bpm').onchange=e=>{S.bpm=+e.target.value||128;draw();log(`master → ${S.bpm} BPM (decks unchanged — hit SYNC)`,'warn');};
+// mixer
+document.querySelectorAll('[data-vol]').forEach(r=>r.oninput=e=>{const id=e.target.dataset.vol;S.tr[id].vol=e.target.value/100;
+ const db=e.target.value<=0?'-inf':(20*Math.log10(e.target.value/100)).toFixed(1)+'dB';
+ if(id==='a')$('dbA').textContent=db;if(id==='b')$('dbB').textContent=db;
+ const n=nodes.fx[id];if(n&&n.g)n.g.gain.value=S.tr[id].vol;});
+// FX rack (live while playing)
+$('fxCut').oninput=e=>{S.fx.cutoff=+e.target.value;$('fxCutV').textContent=+e.target.value>=18000?'open':(+e.target.value/1000).toFixed(1)+'kHz';
+ if(nodes.flt)nodes.flt.frequency.value=S.fx.cutoff;};
+$('fxEcho').oninput=e=>{S.fx.echo=+e.target.value;$('fxEchoV').textContent=e.target.value+'%';
+ if(nodes.wet)nodes.wet.gain.value=S.fx.echo/100*.5;};
+document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const t=S.tr[b.dataset.m];t.mute=!t.mute;b.classList.toggle('on',t.mute);log(`${b.dataset.m} mute ${t.mute?'on':'off'}`);});
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const t=S.tr[b.dataset.s];t.solo=!t.solo;b.classList.toggle('on',t.solo);log(`${b.dataset.s} solo ${t.solo?'on':'off'}`);});
+$('xf').oninput=e=>setXf(e.target.value/100);
+const autoXf=()=>{S.xfade={at:21,bars:8};pushHist();draw();log('wrote auto-xfade: 8 bars @ 0:21, equal-power','ok');};
+$('autoX').onclick=autoXf;$('autoX2').onclick=autoXf;
+$('snap').onclick=e=>e.target.classList.toggle('on');$('quant').onclick=e=>e.target.classList.toggle('on');
+// transport
+function snapshot(){return JSON.stringify({x:S.xfade,r:[S.tr.a.ratio,S.tr.b.ratio],c:[S.tr.a.clip,S.tr.b.clip]});}
+function pushHist(){S.hist.push(snapshot());if(S.hist.length>20)S.hist.shift();}
+$('undo').onclick=()=>{const p=S.hist.pop();if(!p){log('nothing to undo','warn');return;}
+ const o=JSON.parse(p);S.xfade=o.x;S.tr.a.ratio=o.r[0];S.tr.b.ratio=o.r[1];S.tr.a.clip=o.c[0];S.tr.b.clip=o.c[1];draw();log('undo ✓','ok');};
+async function play(from=S.t,rec=true){AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume();
+ live.forEach(s=>{try{s.stop()}catch(e){}});live=[];nodes.fx={};
+ master=AC.createGain();master.gain.value=S.master;nodes.master=master;
+ nodes.an=AC.createAnalyser();nodes.an.fftSize=256;master.connect(nodes.an);
+ // master filter (blend-out sweeps) + dub echo (dotted-8th at master BPM)
+ nodes.flt=AC.createBiquadFilter();nodes.flt.type='lowpass';nodes.flt.frequency.value=S.fx.cutoff;
+ master.connect(nodes.flt).connect(AC.destination);
+ const dly=AC.createDelay(2);dly.delayTime.value=(60/S.bpm)*.75;
+ const fb=AC.createGain();fb.gain.value=.35;nodes.wet=AC.createGain();nodes.wet.gain.value=S.fx.echo/100*.5;
+ dly.connect(fb).connect(dly);dly.connect(nodes.wet).connect(AC.destination);nodes.dly=dly;
+ const t0=AC.currentTime+.05,st=from;S.t=st;nodes.t0=t0;nodes.st=st;S.playing=true;$('play').textContent='Pause';
+ const anySolo=['a','b','s'].some(k=>S.tr[k].solo);
+ // per-deck chain: src -> trim -> lo -> mid -> hi -> vol -> xfade -> master (+ echo send tap)
+ const chain=id=>{const d=S.tr[id];
+  const trim=AC.createGain();trim.gain.value=d.trim;
+  const lo=AC.createBiquadFilter();lo.type='lowshelf';lo.frequency.value=320;lo.gain.value=d.low;
+  const mid=AC.createBiquadFilter();mid.type='peaking';mid.frequency.value=1000;mid.gain.value=d.mid;
+  const hi=AC.createBiquadFilter();hi.type='highshelf';hi.frequency.value=3200;hi.gain.value=d.hi;
+  const g=AC.createGain();g.gain.value=d.vol;
+  const xf=AC.createGain();
+  const send=AC.createGain();send.gain.value=(S.send[id]||0)/100*.8;
+  trim.connect(lo);lo.connect(mid);mid.connect(hi);hi.connect(g);g.connect(xf);xf.connect(master);xf.connect(send).connect(nodes.dly);
+  nodes.fx[id]={trim,lo,mid,hi,g,xf,send};return trim;};
+ const inA=chain('a'),inB=chain('b');
+ const bs=AC.createGain();bs.gain.value=S.tr.s.vol;bs.connect(master);nodes.fx.s={g:bs};
+ const xft=()=>{nodes.fx.a.xf.gain.value=Math.cos(S.xf*Math.PI/2);nodes.fx.b.xf.gain.value=Math.cos((1-S.xf)*Math.PI/2);};xft();const xfi=setInterval(()=>S.playing&&xft(),150);nodes.xfi=xfi;
+ const put=(buf,at,dur,rate,dest,deck='s')=>{if(!buf)return;const s=AC.createBufferSource();s.buffer=buf;s.playbackRate.value=rate;
+  if(deck==='a'||deck==='b'){try{s.detune.value=detuneFor(deck,rate);}catch(e){} s._deck=deck;s._rate=rate;}
+  s.connect(dest);
+  try{s.start(t0+Math.max(0,at-st),Math.max(0,st-at),dur);}catch(e){}live.push(s);};
+ const ok=(id)=>anySolo?S.tr[id].solo:!S.tr[id].mute;
+ if(ok('a')&&S.tr.a.buf&&st<S.tr.a.clip.e)put(S.tr.a.buf,S.tr.a.clip.s,S.tr.a.clip.e-Math.max(st,S.tr.a.clip.s),S.tr.a.ratio,inA,'a');
+ if(ok('b')&&S.tr.b.buf&&st<S.tr.b.clip.e)put(S.tr.b.buf,S.tr.b.clip.s,S.tr.b.clip.e-Math.max(st,S.tr.b.clip.s),S.tr.b.ratio,inB,'b');
+ S.samples.forEach(c=>{if(c.buf&&st<c.e&&ok('s'))put(c.buf,c.s,c.e-Math.max(st,c.s),1,bs);});
+ if(rec)pushHist();
+ log(`play @ ${fmt(st)} · xf ${(S.xf*100)|0} · A ${S.tr.a.ratio} B ${S.tr.b.ratio}${S.loop.on?' · LOOP':''}`);
+ const tick=()=>{if(!S.playing)return;S.t=st+(AC.currentTime-t0);
+  if(S.loop.on&&S.t>=S.loop.end){stop();S.t=S.loop.start;play(S.loop.start,false);return;}
+  if(S.t>=DUR){stop();return;}draw();vuDraw();requestAnimationFrame(tick);};tick();}
+function stop(){live.forEach(s=>{try{s.stop()}catch(e){}});live=[];S.playing=false;$('play').textContent='Play';if(nodes.xfi)clearInterval(nodes.xfi);}
+$('play').onclick=()=>S.playing?(stop(),log('stop')):play(S.t,true);
+$('stop').onclick=()=>{stop();S.t=0;draw();};$('rec').onclick=e=>{e.target.classList.toggle('on');log('rec arm (mock — render mix… to bounce)','warn');};
+$('export').onclick=()=>log('render → `lmms render mashup.mmp -f wav -i sincbest` (stub, WYSIWYG monitor above)','ok');
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
+ if(e.code==='Space'){e.preventDefault();$('play').click();}});
+renderPool();
+draw();
+// copilot: tiny command parser, suggest-only w/ explicit apply
+$('ask').onclick=()=>{
+ const q=$('prompt').value.trim().toLowerCase();pushHist();
+ const m=q.match(/(\d+):(\d+)/);const at=m?+m[1]*60+ +m[2]:21;
+ if(/sync|match.*bpm/.test(q)){sync('a');sync('b');log('copilot: synced both + keylock','ok');}
+ else if(/smooth|softer| abrupt/.test(q)){S.xfade={at,bars:8};draw();log(`copilot: xfade → 8 bars @ 0:${String(at%60).padStart(2,'0')} equal-power`,'ok');}
+ else if(/gain|louder|quieter|vocal/.test(q)){S.tr.b.vol=Math.min(1.2,S.tr.b.vol+.1);draw();log('copilot: B +~1dB','ok');}
+ else if(/help/.test(q)){log('cmds: sync | smooth 0:21 | vocal up | undo');}
+ else{log(`copilot: no-op for "${q}" — try "smooth 0:21"`,'warn');S.hist.pop();}};
+</script></body></html>

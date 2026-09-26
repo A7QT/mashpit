@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mashpit</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="menu"><button title="File: new / open / save project (stub — lands with the engine)">File</button><button title="Edit: undo, clip ops (stub — copilot undo works)">Edit</button><button title="View: layout toggles (stub)">View</button><button title="Render: stub — Phase 1 runs lmms render mashup.mmp -f wav">Render</button><button title="Help: hover anything for a tooltip; that IS the manual">Help</button><span style="flex:1"></span><span style="color:var(--dim);padding:4px" title="Engine credits: Mixxx DJ engine for tempo/key + LMMS for timeline/render">mashpit 0.1 · mixxx 2.5.6 engine · lmms 1.2.2 render</span></div>
+<div id="tipbar">Hover anything for a tooltip. <b>Flow:</b> Load A + Load B → SYNC both decks → drag clips on the timeline → X fader blends → Render mix… exports.</div>
+<div id="tb">
+  <div class="grp"><button id="play" title="Start/stop playback from the red playhead (Spacebar works too)">Play</button><button id="stop" title="Stop and jump the playhead back to 0:00">Stop</button><button id="rec" title="Arm recording (stub — real bounce comes from Render mix)">Rec</button></div>
+  <div class="grp"><span id="time" class="mono" title="Playhead position / total length">00:00.0 / 00:45</span></div>
+  <div class="grp"><span title="Master tempo. Decks stretch to match this when you hit SYNC">Master</span><input id="bpm" type="number" value="128" title="Master tempo in BPM — the boss tempo both decks follow after SYNC"><span>BPM</span><button id="snap" class="on" title="Snap: dragged clips jump to the nearest beat instead of landing anywhere">Snap</button><button id="quant" class="on" title="Quantize: hot-cue jumps and seeks land exactly on a beat">Quant</button></div>
+  <div class="grp"><button id="loadA" title="Load an audio file into Deck A (stub — engine Phase 1)">Load A</button><button id="loadB" title="Load an audio file into Deck B (stub — engine Phase 1)">Load B</button><button id="loadS" title="Add samples (stub — engine Phase 1)">+ Sample</button></div>
+  <div class="grp"><button id="export" style="border-color:var(--acc);color:var(--acc)" title="Bounce the full mix to WAV (stub — Phase 1 runs lmms render)">Render mix…</button></div>
+</div>
+
+<div id="decks">
+  <div class="deck A">
+    <div class="dtop"><span class="fxbadges"><b class="lit">FX1</b><b>FX2</b></span><span class="fname" id="fnameA" title="Loaded file">a.mp3</span><span class="dtime mono" id="timeA" title="Elapsed / remaining inside Deck A's clip">00:00 / 00:29</span><button id="ejectA" title="Unload Deck A">⏏</button></div>
+    <canvas class="wave" id="waveA" title="Waveform + beat grid (white lines = beats, tall = bar). Red line = playhead"></canvas>
+    <div class="dbody">
+      <div class="dleft">
+        <div class="jog" id="jogA" title="Jog wheel: drag to seek while stopped, pitch-bend while playing (springs back)"><div class="mark"></div></div>
+        <div class="dtransport"><button id="cueA" title="CUE: jump back to the start of Deck A's clip">CUE</button><button id="deckPlayA" title="Play/stop the whole mix (one shared transport)">▶</button></div>
+      </div>
+      <div class="dmid">
+        <div class="ctlrow" title="Deck A channel: cue routing, gain trim, file tempo, sync">
+          <button class="hb" data-h="a" title="H (headphone/PFL): cue Deck A — hear it alone">H</button><button class="hb on" data-main="a" title="M (main): Deck A goes to the main mix. Click to pull it out">M</button>
+          <span class="trim">GAIN <input id="trimA" type="range" min="0" max="200" value="100" title="Deck A gain trim 0–200%, pre-EQ (Mixxx GAIN knob)"></span>
+          <input id="filebpmA" type="number" value="124" step="0.01" title="File tempo. Edit me, then hit SYNC">
+          <button id="syncA" class="bigger" title="Match Deck A to master BPM and turn keylock on">SYNC</button>
+        </div>
+        <div class="readouts"><span title="Playback speed multiplier. 1.0320 = 3.2% fast">ratio <b id="ratioA">1.0000</b></span><span title="Musical key (Camelot) plus your semitone shift">key <b>8A <span id="keyAv" title="Key shift in semitones. Needs keylock ON to hold tempo">+0 st</span></b></span></div>
+        <div class="seclabel" title="Hot cues store jump points. First click SETS at the playhead, next clicks JUMP, alt-click clears">HOT CUES</div>
+        <div class="cues"><button data-cue="a" data-i="0" title="Hot cue 1: click SETS at playhead, click again JUMPs, alt-click clears">1</button><button data-cue="a" data-i="1" title="Hot cue 2: click SETS at playhead, click again JUMPs, alt-click clears">2</button><button data-cue="a" data-i="2" title="Hot cue 3: click SETS at playhead, click again JUMPs, alt-click clears">3</button><button data-cue="a" data-i="3" title="Hot cue 4: click SETS at playhead, click again JUMPs, alt-click clears">4</button><button data-cue="a" data-i="4" title="Hot cue 5: click SETS at playhead, click again JUMPs, alt-click clears">5</button><button data-cue="a" data-i="5" title="Hot cue 6: click SETS at playhead, click again JUMPs, alt-click clears">6</button><button data-cue="a" data-i="6" title="Hot cue 7: click SETS at playhead, click again JUMPs, alt-click clears">7</button><button data-cue="a" data-i="7" title="Hot cue 8: click SETS at playhead, click again JUMPs, alt-click clears">8</button></div>
+        <div class="looprow"><span title="Beatloop N beats from the playhead. Click the lit size to release">LOOP</span><button id="loopA1" title="Loop 1 beat">1</button><button id="loopA2" title="Loop 2 beats">2</button><button id="loopA4" title="Loop 4 beats">4</button><button id="loopA8" title="Loop 8 beats">8</button></div>
+        <div class="keyrow" title="Key = pitch WITHOUT tempo. Jumps move the playhead by beats">
+          <button id="keyAm" title="Key down 1 semitone (±6 max)">KEY−</button><button id="keyAp" title="Key up 1 semitone (±6 max)">KEY+</button>
+          <span style="flex:1"></span>
+          <button id="jumpAm4" title="Beatjump back 4 beats (quantized if Quant on)">−4</button><button id="jumpAm1" title="Beatjump back 1 beat">−1</button><button id="jumpAp1" title="Beatjump forward 1 beat">+1</button><button id="jumpAp4" title="Beatjump forward 4 beats">+4</button>
+        </div>
+        <div class="eq3" title="Deck A 3-band EQ — cuts/boosts, like a DJ mixer">
+          <label>LOW <b id="eqAlowV">+0</b><input id="eqAlow" type="range" min="-12" max="12" step="1" value="0" title="Low EQ ±12dB — kill A's bass to make room for B"></label>
+          <label>MID <b id="eqAmidV">+0</b><input id="eqAmid" type="range" min="-12" max="12" step="1" value="0" title="Mid EQ ±12dB — vocals live here"></label>
+          <label>HIGH <b id="eqAhiV">+0</b><input id="eqAhi" type="range" min="-12" max="12" step="1" value="0" title="High EQ ±12dB — hats and air"></label>
+        </div>
+        <div class="sendrow" title="FX send: how much of Deck A feeds the dub echo (post-fader, dotted-8th)">FX SEND <input id="sendA" type="range" min="0" max="100" value="0" title="Echo send 0–100%"><span class="mono" id="sendAv">0%</span></div>
+      </div>
+      <div class="dright">
+        <div class="ratepct mono" id="pitchvA" title="Pitch adjustment from the rate slider">+0.00%</div>
+        <input id="pitchA" type="range" min="92" max="108" step="0.01" value="100" title="Rate slider 92–108% (Mixxx pitch fader). 100 = normal">
+        <div class="bendrow"><button id="nudgeAm" title="Nudge tempo slightly slower">−</button><button id="nudgeAp" title="Nudge tempo slightly faster">+</button></div>
+        <button id="lockA" class="klock" title="Keylock: change speed WITHOUT changing pitch">KEYLOCK OFF</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="boothmix">
+    <div class="bmtitle">BOOTH MIX</div>
+    <canvas id="vu" title="Master output level, live while playing"></canvas>
+    <label title="Master output volume">MASTER <input id="mstKnob" type="range" min="0" max="120" value="90" title="Master volume 0–120%"></label>
+    <div class="xrow" title="Crossfader (mirrors the X fader below): LEFT = only A, CENTER = both, RIGHT = only B"><span>A</span><input id="xf2" type="range" min="0" max="100" value="50" title="Crossfader. 50 = middle"><span>B</span></div>
+    <div class="mono" id="xfv2" title="Which side the crossfader favours">C</div>
+    <button id="autoX2" title="Write an 8-bar automatic crossfade at 0:21">auto 0:21</button>
+  </div>
+
+  <div class="deck B">
+    <div class="dtop"><span class="fxbadges"><b class="lit">FX1</b><b>FX2</b></span><span class="fname" id="fnameB" title="Loaded file">b.mp3</span><span class="dtime mono" id="timeB" title="Elapsed / remaining inside Deck B's clip">00:00 / 00:32</span><button id="ejectB" title="Unload Deck B">⏏</button></div>
+    <canvas class="wave" id="waveB" title="Waveform + beat grid (white lines = beats, tall = bar). Red line = playhead"></canvas>
+    <div class="dbody">
+      <div class="dleft">
+        <div class="jog" id="jogB" title="Jog wheel: drag to seek while stopped, pitch-bend while playing (springs back)"><div class="mark"></div></div>
+        <div class="dtransport"><button id="cueB" title="CUE: jump back to the start of Deck B's clip">CUE</button><button id="deckPlayB" title="Play/stop the whole mix (one shared transport)">▶</button></div>
+      </div>
+      <div class="dmid">
+        <div class="ctlrow" title="Deck B channel: cue routing, gain trim, file tempo, sync">
+          <button class="hb" data-h="b" title="H (headphone/PFL): cue Deck B — hear it alone">H</button><button class="hb on" data-main="b" title="M (main): Deck B goes to the main mix. Click to pull it out">M</button>
+          <span class="trim">GAIN <input id="trimB" type="range" min="0" max="200" value="100" title="Deck B gain trim 0–200%, pre-EQ (Mixxx GAIN knob)"></span>
+          <input id="filebpmB" type="number" value="132" step="0.01" title="File tempo. Edit me, then hit SYNC">
+          <button id="syncB" class="bigger" title="Match Deck B to master BPM and turn keylock on">SYNC</button>
+        </div>
+        <div class="readouts"><span title="Playback speed multiplier. 0.9700 = 3% slow">ratio <b id="ratioB">1.0000</b></span><span title="Musical key (Camelot) plus your semitone shift">key <b>9A <span id="keyBv" title="Key shift in semitones. Needs keylock ON to hold tempo">+0 st</span></b></span></div>
+        <div class="seclabel" title="Hot cues store jump points. First click SETS at the playhead, next clicks JUMP, alt-click clears">HOT CUES</div>
+        <div class="cues"><button data-cue="b" data-i="0" title="Hot cue 1: click SETS at playhead, click again JUMPs, alt-click clears">1</button><button data-cue="b" data-i="1" title="Hot cue 2: click SETS at playhead, click again JUMPs, alt-click clears">2</button><button data-cue="b" data-i="2" title="Hot cue 3: click SETS at playhead, click again JUMPs, alt-click clears">3</button><button data-cue="b" data-i="3" title="Hot cue 4: click SETS at playhead, click again JUMPs, alt-click clears">4</button><button data-cue="b" data-i="4" title="Hot cue 5: click SETS at playhead, click again JUMPs, alt-click clears">5</button><button data-cue="b" data-i="5" title="Hot cue 6: click SETS at playhead, click again JUMPs, alt-click clears">6</button><button data-cue="b" data-i="6" title="Hot cue 7: click SETS at playhead, click again JUMPs, alt-click clears">7</button><button data-cue="b" data-i="7" title="Hot cue 8: click SETS at playhead, click again JUMPs, alt-click clears">8</button></div>
+        <div class="looprow"><span title="Beatloop N beats from the playhead. Click the lit size to release">LOOP</span><button id="loopB1" title="Loop 1 beat">1</button><button id="loopB2" title="Loop 2 beats">2</button><button id="loopB4" title="Loop 4 beats">4</button><button id="loopB8" title="Loop 8 beats">8</button></div>
+        <div class="keyrow" title="Key = pitch WITHOUT tempo. Jumps move the playhead by beats">
+          <button id="keyBm" title="Key down 1 semitone (±6 max)">KEY−</button><button id="keyBp" title="Key up 1 semitone (±6 max)">KEY+</button>
+          <span style="flex:1"></span>
+          <button id="jumpBm4" title="Beatjump back 4 beats (quantized if Quant on)">−4</button><button id="jumpBm1" title="Beatjump back 1 beat">−1</button><button id="jumpBp1" title="Beatjump forward 1 beat">+1</button><button id="jumpBp4" title="Beatjump forward 4 beats">+4</button>
+        </div>
+        <div class="eq3" title="Deck B 3-band EQ — cuts/boosts, like a DJ mixer">
+          <label>LOW <b id="eqBlowV">+0</b><input id="eqBlow" type="range" min="-12" max="12" step="1" value="0" title="Low EQ ±12dB — kill B's bass to make room for A"></label>
+          <label>MID <b id="eqBmidV">+0</b><input id="eqBmid" type="range" min="-12" max="12" step="1" value="0" title="Mid EQ ±12dB — vocals live here"></label>
+          <label>HIGH <b id="eqBhiV">+0</b><input id="eqBhi" type="range" min="-12" max="12" step="1" value="0" title="High EQ ±12dB — hats and air"></label>
+        </div>
+        <div class="sendrow" title="FX send: how much of Deck B feeds the dub echo (post-fader, dotted-8th)">FX SEND <input id="sendB" type="range" min="0" max="100" value="0" title="Echo send 0–100%"><span class="mono" id="sendBv">0%</span></div>
+      </div>
+      <div class="dright">
+        <div class="ratepct mono" id="pitchvB" title="Pitch adjustment from the rate slider">+0.00%</div>
+        <input id="pitchB" type="range" min="92" max="108" step="0.01" value="100" title="Rate slider 92–108% (Mixxx pitch fader). 100 = normal">
+        <div class="bendrow"><button id="nudgeBm" title="Nudge tempo slightly slower">−</button><button id="nudgeBp" title="Nudge tempo slightly faster">+</button></div>
+        <button id="lockB" class="klock" title="Keylock: change speed WITHOUT changing pitch">KEYLOCK OFF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mid">
+  <div id="heads">
+    <div class="th A"><div class="nm" title="Timeline track for Deck A">A · music</div><div style="color:var(--dim)">ch 1-2 · 48kHz</div>
+      <div class="ctl"><button data-m="a" title="Mute: silence track A">M</button><button data-s="a" title="Solo: hear ONLY track A">S</button><input type="range" min="0" max="100" value="90" data-vol="a" title="Track A volume"></div></div>
+    <div class="th B"><div class="nm" title="Timeline track for Deck B">B · music</div><div style="color:var(--dim)">ch 1-2 · 48kHz</div>
+      <div class="ctl"><button data-m="b" title="Mute: silence track B">M</button><button data-s="b" title="Solo: hear ONLY track B">S</button><input type="range" min="0" max="100" value="90" data-vol="b" title="Track B volume"></div></div>
+    <div class="th S"><div class="nm" title="Samples track: one-shots. Each chip is its own clip">S · samples</div><div style="color:var(--dim)" id="poolinfo" title="Sample clips on the lane">2 items</div>
+      <div class="ctl"><button data-m="s" title="Mute: silence all samples">M</button><button data-s="s" title="Solo: hear ONLY the samples">S</button></div></div>
+  </div>
+  <div id="tlwrap" title="Arrangement: drag clips left/right. The dashed gold box is the crossfade zone"><div id="ruler" title="Time ruler in seconds (45s demo)"></div>
+    <div class="lane" data-lane="a" title="Lane A: Deck A's clip"></div><div class="lane" data-lane="b" title="Lane B: Deck B's clip — overlap with A in gold = the blend"></div><div class="lane" data-lane="s" title="Samples lane"></div>
+    <div id="ph" title="Playhead"></div></div>
+  <div id="mix">
+    <div class="strip" title="Channel A fader"><span>A</span><input class="fader" type="range" min="0" max="100" value="90" data-vol="a" title="A volume fader"><span class="db" id="dbA" title="A level in decibels">-0.9dB</span><button data-m="a" class="mono" title="Mute Deck A">M</button></div>
+    <div class="strip" title="Crossfader: LEFT = only A, CENTER = both, RIGHT = only B"><span style="color:var(--acc)">X</span><input class="fader" id="xf" type="range" min="0" max="100" value="50" title="Crossfader. 50 = middle"><span class="db" id="dbX" title="Favoured side: A, C or B">C</span><button id="autoX" title="Write an 8-bar automatic crossfade at 0:21">auto 0:21</button></div>
+    <div class="strip" title="Channel B fader"><span>B</span><input class="fader" type="range" min="0" max="100" value="90" data-vol="b" title="B volume fader"><span class="db" id="dbB" title="B level in decibels">-0.9dB</span><button data-m="b" class="mono" title="Mute Deck B">M</button></div>
+  </div>
+</div>
+
+<div id="bot">
+  <div id="log" title="Event console: every action lands here with a timestamp. Newest on top"></div>
+  <div id="rack" title="FX rack: master filter + echo (wired to the engine in Phase 1)">
+    <div class="rt">FX RACK · master</div>
+    <label>FILTER <b id="fxCutV">open</b><input id="fxCut" type="range" min="400" max="18000" step="100" value="18000" title="Master low-pass filter. Slide left to darken the mix"></label>
+    <label>ECHO MIX <b id="fxEchoV">0%</b><input id="fxEcho" type="range" min="0" max="60" value="0" title="Dub echo return, dotted-8th at master BPM"></label>
+    <div style="display:flex;gap:4px;align-items:center"><button id="loopClear" title="Release any armed loop">loop: off</button></div>
+  </div>
+  <div id="poolpanel" title="Sample pool: audition or place at the playhead">
+    <div class="rt">SAMPLE POOL</div>
+    <div id="pool"></div>
+  </div>
+  <div id="copilot"><span style="color:var(--dim)" title="The copilot only runs tiny commands — undo always works">COPILOT — suggest-only. Commands: <span class="mono">sync, smooth 0:21, gain, help</span></span>
+    <input id="prompt" value="smooth 0:21" spellcheck="false" title="Type a command, hit run"><div style="display:flex;gap:4px"><button id="ask" style="flex:1" title="Run the copilot command">run</button><button id="undo" title="Step back (20 steps of history)">undo</button></div></div>
+</div>
+<div id="status"><span title="Audio settings target">48kHz · 512spl · RubberBand R3 (render) / linear (monitor)</span><span id="stXfade" title="Current crossfade">xfade 4 bars @ 0:21</span><span id="stEngine" title="UI shell — engine lands in Phase 1">engine: ui-shell (no audio yet)</span><span class="kbd-hint" title="Space toggles play">space=play</span></div>
+
+<script src="js/state.js"></script>
+<script src="js/booth.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/transport.js"></script>
+<script src="js/mixer.js"></script>
+<script src="js/bottom.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
