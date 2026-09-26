@@ -141,6 +141,9 @@ post-xfade per deck, dotted-8th delay, wet return to master.
   bars, curve}`, `move_clip`, `set_pitch`, `set_gain`. All schema-validated.
 - Flow: `prompt → --dry-run diff (human reads) → snippet render (MP3 ~15s,
   `PreviewTier`) → full render (WAV, `FullTier`) on approval`.
+- Driver rules (proven in Phase 0 spike): pump (paused) until `track_loaded=1`
+  before playing; `EngineMixer::process()` takes SAMPLES; render by target
+  *playposition* and trim the warmup transient (first ~100 blocks vary).
 - Undo: 20-step history of arrangement snapshots. Non-negotiable.
 - The copilot never touches audio bytes or C++. JSON in, JSON out.
 

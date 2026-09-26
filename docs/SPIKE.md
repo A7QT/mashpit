@@ -48,16 +48,41 @@ Mixxx 2.4 (`mixxx/CMakeLists.txt`):
 ## Build status
 
 - [x] LMMS 1.2.2: configured + built, `lmms-build/lmms --version` runs (Qt 5.15).
-- [~] Mixxx 2.4: `mixxx-lib` links; `mixxx` exe target compiling.
-  NOTE: build with `CPLUS_INCLUDE_PATH=<spike>/prefix/include` and
-  `LIBRARY_PATH=<spike>/prefix/lib64` exported (GSL includes don't propagate
-  to the exe target's PCH through the PRIVATE link).
-- [ ] NEXT: `spike-harness/` (written, in scratch area) — mirrors Mixxx's own
-  `src/test/signalpathtest.h` fixtures: `TestEngineMixer` subclass forcing
-  main/head/booth on, real `Deck`, `Track::newTemporary(file)`,
-  `SoundSourceProxy::registerProviders()`, keylock on, `mixer.process(N)`
-  in a loop, WAV out via libsndfile. Non-zero exit on stall (playposition
-  stops) or all-silence output. Wire-in: append to `mixxx/CMakeLists.txt`
-  (scratch) `option(MIXXX_SPIKE_HARNESS …)` + `add_subdirectory`.
-  Run: `QT_QPA_PLATFORM=offscreen spike-harness song.mp3 out.wav 2000 256`
-  (LMMS-sized 256-frame blocks, burst-paced — the hostile case).
+- [x] Mixxx 2.4: `mixxx` exe links and `--version` runs (2.4.2).
+  NOTE: build with `CPLUS_INCLUDE_PATH=<spike>/prefix/include:<spike>/spike-stub`
+  and `LIBRARY_PATH=<spike>/prefix/lib64` exported (spike includes don't
+  propagate to the exe target's PCH through PRIVATE links).
+- [x] PHASE 0 GATE: **PASS**. `spike-harness/harness.cpp` (scratch area):
+  real file → `TestEngineMixer` (main/head/booth forced on) → real `Deck` →
+  `Track::newTemporary` → `mixer.process(N)` with LMMS-sized 256-frame blocks,
+  keylock on, WAV out via libsndfile. Non-zero exit on stall or silence.
+  Run: `QT_QPA_PLATFORM=offscreen spike-harness song.wav out.wav 2000 256`.
+  Result: WAV-vs-input correlation **1.0000** at 1.0x; steady state
+  bit-identical across runs (only the first ~5% differs — see finding 3).
+- [ ] Follow-ups (NOT gate-blockers): MP3 decode missing in spike config
+  (no MAD/FFmpeg dev libs — WAV proved the clock path; MP3 is packaging
+  for Phase 1); `spike-stub/` tracers + harness `fprintf` debug stay as-is.
+
+## Phase 0 findings (load-bearing for the real build)
+
+1. **Pump-then-render.** Track load completes on `CachingReaderWorker`, which
+   only runs when `EngineMixer::process()` pumps the worker scheduler (~700
+   blocks to load here). The driver must pump (paused) until `track_loaded=1`
+   (bounded spin + timeout), THEN play and render. A fixed settle-sleep does
+   nothing — the wake comes from `process()`, not wall time.
+2. **Units: `EngineMixer::process()` takes SAMPLES, not frames** (stereo: ×2).
+   Passing frames rendered half-speed output and confused every measurement
+   until caught. Always name the unit at call sites.
+3. **Warmup transient is nondeterministic; steady state is bit-identical.**
+   First ~100 blocks vary run to run (cache-warm `UNAVAILABLE` race); after
+   that, output is sample-identical. OfflineDriver must render by target
+   *playposition* and trim (or pre-roll past) the transient — never assume
+   block N maps to file position N before steady state.
+4. **Centered crossfader = −3.03 dB.** Output RMS matched input × cos(π/4)
+   exactly. Sanity-check gains against this whenever a render sounds "quiet".
+5. **Qt qDebug/qCritical are mute in this shell env** (proven with a minimal
+   Qt app — fprintf works). Harness diagnostics use fprintf(stderr); the WAV
+   is the source of truth. Don't "fix" this in the harness — fix nothing.
+6. **moc needs macro definitions on its include path.** A stub header alone
+   isn't enough: without the include dir in `MOC_INCLUDES`, moc emits broken
+   `FRIEND_TEST` slot code. Verified via `AutogenInfo.json` inspection.
