@@ -39,6 +39,11 @@ Mixxx 2.4 (`mixxx/CMakeLists.txt`):
    AcoustID self-disables at runtime — deck/analyzer paths never touch it).
 9. `CMAKE_PREFIX_PATH=<prefix>` + `PKG_CONFIG_PATH=<prefix>/lib64/pkgconfig`
    so FindTagLib takes vendored 1.13.1 over system 2.3 (2.4 rejects TagLib ≥ 2.0).
+10. `spike-stub/gtest/gtest_prod.h` stub (FRIEND_TEST macro only — production
+    headers include it; real gtest/gmock belongs in Phase 1 CI, where Mixxx's
+    own suite becomes the graft's regression net).
+11. Vendored to `prefix/`: taglib **1.13.1** (shared), Microsoft GSL **4.2.0**
+    (`ms-gsl-devel` doesn't exist on Fedora 44).
 
 ## Build status
 
