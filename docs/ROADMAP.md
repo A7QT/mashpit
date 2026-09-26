@@ -29,27 +29,28 @@ Prove `EngineBuffer` runs inside an LMMS `PlayHandle` without `SoundManager`.
   listen-tests calibrating the validator's ±6st / ±8% guesses into measured
   limits, marked TUNABLE-or-LOAD-BEARING in ARCHITECTURE.md.
 
-## Phase 2 — ears for the copilot
+## Phase 2 — ears (analysis sidecars + assistant commands)
 
 - `MixxxAnalyzerBridge`: import → `AnalyzerBeats/Key/Gain` → `*.analysis.json`
-  sidecars (ARCHITECTURE §3).
-- Copilot CLI: `match_bpm`, `smooth_transition`, snippet MP3 previews (~15s,
-  fast resample), `qc` (clipping/silence/LUFS/key-clash score), 20-step undo.
-- The "make both match bpm + smooth the transition at 0:21" prompt works
-  against a fixture and prints a human-readable diff first.
-- **Exit gate:** full prompt→validate→preview→fix→full-render loop on fixtures,
-  no human touching JSON.
+  sidecars (ARCHITECTURE §3). Done: `mashpit-analyze` + `mashpit analyze`.
+- Assistant CLI (`match_bpm`, `smooth`, snippet previews, `qc`, undo): a
+  sidekick for arranging faster — explicitly NOT the product. Done, tested.
+- **Exit gate:** sidecars for fixtures are correct (BPM/key/gain sane);
+  `render` consumes sidecar BPM for auto-ratio; full
+  analyze→edit→preview→qc→undo loop runs without touching JSON by hand.
 
-## Phase 3 — the booth (UI from the heist)
+## Phase 3 — the timeline app (the actual product)
 
-- Rebuild `demo3.html`'s booth against the real engine, following
-  MIXXX_UI_HEIST.md §2 until every row is ✅ (slip mode explicitly last).
-- Timeline visualizes `mashup.json`: beatgrid overlay from `Beats::iterateFrom`,
-  BPM/key badges, xfade zone, per-deck clocks.
-- Copilot stays a docked suggest-only panel. Tooltips on everything, carried
-  over from the prototype verbatim where behavior matches.
-- **Exit gate:** a non-DJ human loads two tracks, SYNCs, smooths 0:21, and
-  exports — using only tooltips, no help from us.
+- Booth against the real engine, following MIXXX_UI_HEIST.md §2 until every
+  row is ✅ (slip mode explicitly last). Done in `glue/app` v1 (jogs,
+  waveforms, CUE, EQ, crossfader, live PortAudio).
+- Timeline: `mashup.json` as an editable arrangement — draggable clips,
+  beatgrid overlay from `Beats::iterateFrom`, BPM/key badges, xfade zone,
+  per-deck clocks. View-only today; dragging clips IS the core remaining work
+  (DjDeckTrack), ahead of all assistant features.
+- Assistant stays a docked suggest-only panel. Tooltips on everything.
+- **Exit gate:** a non-DJ human loads two tracks, drags them on the timeline,
+  SYNCs, smooths 0:21, and exports — using only tooltips, no help from us.
 
 ## Phase 4 — discord drop
 
@@ -62,3 +63,7 @@ Prove `EngineBuffer` runs inside an LMMS `PlayHandle` without `SoundManager`.
   explored and rejected: agent-first and lifestyle-vibe respectively. The keeper
   direction is `demo3.html`: dense tool, Mixxx-replica booth, copilot as sidekick.
 - License deliberation is over: GPL everywhere, private + discord distribution.
+- Scope correction (Sep 2026): this is **timeline-based Mixxx, not an AI
+  mashup maker**. The assistant/copilot is a sidekick panel and a CLI;
+  the product is the booth + timeline + render. Any doc language suggesting
+  otherwise is stale — fix it on sight.

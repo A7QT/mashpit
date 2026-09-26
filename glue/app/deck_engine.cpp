@@ -91,10 +91,16 @@ QString DeckEngine::loadFile(int deck, const QString& path) {
     // does the pumping; without it, pump manually right here.
     for (int i = 0; i < 200; ++i) {
         if (isLoaded(deck)) {
+            fprintf(stderr, "mashpit: deck %d loaded after %d pumps\n", deck, i);
             return {};
         }
         if (m_stream == nullptr) {
             m_pMixer->process(kFramesPerBuffer * 2); // SAMPLES, not frames
+        }
+        if (i % 50 == 0) {
+            fprintf(stderr, "mashpit: pump %d loaded=%d\n", i,
+                    isLoaded(deck) ? 1 : 0);
+            fflush(stderr);
         }
         QThread::msleep(20);
         QApplication::processEvents();

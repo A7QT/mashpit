@@ -3,9 +3,10 @@
 ## 1. The graft
 
 LMMS 1.2.2 is the body (clock, timeline, mixer, offline export).
-Mixxx 2.5.6 is the transplanted brain (decks, stretch, analysis, sync).
+Mixxx 2.4 branch is the transplanted brain (decks, stretch, analysis, sync).
 One new layer of glue holds them together. Both upstreams stay pristine
-as git submodules; **all our code lives in `glue/`, `spec/`, `agent/`**.
+(pinned shallow clones via `upstream/sync.sh`); **all our code lives in
+`glue/`, `spec/`, `agent/`**.
 
 ```
 upstream/mixxx  @ 2.4 branch  (Qt5 — last Qt5 series; ≥2.5 is Qt6, unlinkable)
@@ -133,7 +134,11 @@ Chain order (both monitor and render): `src → trim → low → mid → high �
 vol → xfade(equal-power) → master → filter → destination`, echo send tapped
 post-xfade per deck, dotted-8th delay, wet return to master.
 
-## 5. Copilot contract
+## 5. Assistant contract (sidekick interface, not the product)
+
+The product is the timeline app (§1–§4). This section specifies the optional
+assistant: free text in, typed edits out, human applies. It exists to arrange
+faster, never to replace arranging.
 
 - Input: free text + `get_state` (compact: project BPM, per-track
   `{bpm, key, tempoRatio}`, mix points — never full beatmaps).

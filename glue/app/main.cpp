@@ -11,12 +11,15 @@
 
 namespace {
 
-int runSelftest(DeckEngine& engine, const QString& file) {
+int runSelftest(DeckEngine& engine, const QString& file, bool keylock = true) {
+    fprintf(stderr, "mashpit: selftest start (ctor done)\n");
     const QString err = engine.loadFile(0, file);
     if (!err.isEmpty()) {
         fprintf(stderr, "selftest LOAD FAIL: %s\n", err.toLocal8Bit().constData());
         return 3;
     }
+    ControlObject::set(ConfigKey(QStringLiteral("[Channel1]"), QStringLiteral("keylock")),
+            keylock ? 1.0 : 0.0);
     ControlObject::set(ConfigKey(QStringLiteral("[Channel1]"), QStringLiteral("play")), 1.0);
     double peak = 0.0;
     for (int i = 0; i < 200; ++i) {
@@ -56,6 +59,10 @@ int main(int argc, char** argv) {
     if (argc == 3 && QString(argv[1]) == "--selftest") {
         DeckEngine engine;
         return runSelftest(engine, QString::fromLocal8Bit(argv[2]));
+    }
+    if (argc == 3 && QString(argv[1]) == "--selftest-nokeylock") {
+        DeckEngine engine;
+        return runSelftest(engine, QString::fromLocal8Bit(argv[2]), false);
     }
 
     // Layout verification for headless dev:

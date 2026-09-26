@@ -1,10 +1,13 @@
-# mashpit
+# mashpit — Mixxx with a timeline instead of a booth
 
-Offline mashup lab: **Mixxx's DJ engine on a DAW timeline.** DJ brains, DAW workflow,
-no live pressure. GPL throughout — Mixxx (GPLv2+) + LMMS (GPLv2+) can legally merge.
+**The product:** everything Mixxx can do (sync, keylock, hotcues, loops, EQ,
+FX), arranged on a DAW timeline and rendered offline. No live pressure, no
+controller needed — build the blend, press render, keep the WAV. GPL throughout
+(Mixxx GPLv2+ + LMMS GPLv2+).
 
-> Status: prototypes only (`demo*.html`). The real build (C++ graft) hasn't started.
-> These docs are the handoff to the agents that build it.
+> Status: the real build is underway (`glue/` C++: OfflineDriver renders,
+> analyzer writes sidecars, Qt booth app plays live). `demo*.html`/`app/`
+> are frozen/clickable references. Docs below are the handoff.
 
 ## Locked decisions (don't relitigate without new evidence)
 
@@ -12,10 +15,11 @@ no live pressure. GPL throughout — Mixxx (GPLv2+) + LMMS (GPLv2+) can legally 
   2→4 decks later is copy-paste if `DjDeckTrack` is done right.
 - **LMMS is the host, Mixxx is the organ.** LMMS owns clock, timeline, mixer,
   offline export. Mixxx owns decks, time-stretch, beat/key analysis, sync.
-- **Copilot is suggest-only.** It emits typed edit ops, the human applies.
-  No autonomous agent loop. Ever.
-- **Same `mashup.json` renders the same WAV.** Determinism is a requirement,
-  it's what makes the copilot correction loop work.
+- **The timeline is the product; the copilot is a sidekick.** An optional
+  assistant may suggest edits as typed ops the human applies — it is never
+  the point, never autonomous, never required to use the app.
+- **Same `mashup.json` renders the same WAV.** Determinism is a requirement:
+  timeline renders must be repeatable, bar for bar.
 
 ## Repo map
 

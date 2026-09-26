@@ -1,9 +1,10 @@
-# agent/ — copilot tooling (JSON in, JSON out; never touches audio)
+# agent/ — arrangement tooling: CLI for validate/render/analyze/edit/snippet/qc/undo
 
-- `mashpit` — CLI: `validate` + `render` (both live). `render` needs
-  `MASHPT_OFFLINE_DRIVER` pointing at the built `glue/offline-driver`.
-- `ops.py` — typed edit ops (`match_bpm`, `smooth_transition`, …) + `--dry-run` diffs.
-- MCP server + snippet/qc pipeline land in Phase 2 (see docs/ROADMAP.md).
+- `mashpit` — the whole CLI (stdlib only, except numpy for the layered
+  render path). `render` needs `MASHPT_OFFLINE_DRIVER` pointing at the built
+  `glue/offline-driver`; `analyze` needs `MASHPT_ANALYZER`.
+- Sidecars live next to audio as `<file>.analysis.json` (written by `analyze`).
 
-Rules: suggest-only, schema-validated output, 20-step undo. The copilot never
-touches audio bytes or C++.
+Rules: suggest-only edits, schema-validated I/O, 20-step undo. This tooling
+assists arranging; the product is the timeline app. It never touches audio
+bytes or C++ directly — it drives the engine through `mashup.json`.

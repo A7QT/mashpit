@@ -78,7 +78,8 @@ void WaveformWidget::paintEvent(QPaintEvent*) {
         p.drawRect(QRectF(0, 0, m_playPos * width(), height()));
     } else {
         p.setPen(QColor("#5a6376"));
-        p.drawText(rect(), Qt::AlignCenter, m_haveFile ? "" : "no waveform — load WAV / FLAC / OGG");
+        p.drawText(rect(), Qt::AlignCenter,
+                m_haveFile ? "" : "peaks need WAV / FLAC / OGG (audio still plays)");
     }
     // beat-ish grid + playhead
     p.setPen(QColor(255, 255, 255, 26));
