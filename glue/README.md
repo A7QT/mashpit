@@ -4,13 +4,18 @@
 
 - `offline-driver` — LIVE. Two-deck offline render (details below).
 - `app/` — LIVE v1. Native Qt5 booth on `mixxx-lib`: two deck panels (load,
-  file-BPM + SYNC, rate fader, keylock, KEY±, 3-band EQ, volume), shared
-  transport, crossfader, master VU, all tooltips. Live sound via PortAudio;
-  `mashpit-app --selftest song.wav` proves load→play→render headless
-  (peak 0.4883 on full-scale sweep = bit-transparent path).
+  file-BPM + SYNC, rate fader, keylock, KEY±, 3-band EQ, volume, jog,
+  waveform + click-seek, CUE), shared transport, crossfader, master VU,
+  arrangement timeline (mashup.json view + one-click Open arrangement),
+  suggest-only copilot dock, all tooltips. Live sound via PortAudio;
+  `mashpit-app --selftest song.wav` proves load→play→render headless;
+  `--screenshot out.png [arr.json]` verifies layout headless.
   v1 limits: WAV/FLAC/OGG/OPUS (no MP3 decoder in this build config),
-  hand-typed BPMs, no hotcues/loops/FX sends (wired, not faked — omitted),
-  no timeline (DjDeckTrack), render stays in `mashpit render`.
+  hand-typed BPMs (or arrangement), no hotcues/loops/FX sends (omitted,
+  not faked), timeline view-only, render stays in `mashpit render`.
+- `analyze.cpp` → `mashpit-analyze` — LIVE. Real Mixxx analyzers
+  (QueenMary beats, key, Ebur128 loudness) → `*.analysis.json` sidecars.
+  `agent/mashpit analyze/edit/snippet/qc/undo` all live against it.
 
 - `DjDeckTrack : Track` + `DjDeckPlayHandle : PlayHandle` — owns one Mixxx
   `EngineBuffer + CachingReader + scaler`; driven by LMMS

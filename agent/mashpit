@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""mashpit CLI — Phase 1b: `validate` + `render` (OfflineDriver) live.
+"""mashpit CLI — validate + render + analyze + edit + snippet + qc + undo.
 
 Usage:
     agent/mashpit validate <arrangement.json> [--quiet]
-    agent/mashpit render <arrangement.json> [--tier preview|full]
-        [--out FILE] [--driver PATH] [--frames N]
-
-render needs MASHPT_OFFLINE_DRIVER env (or --driver) pointing at the
-glue/offline-driver binary, and numpy for the layered path.
-v1 limits: 1-2 clips, first clip starts at bar 1, files resolve relative
-to the JSON. Sequential (mix[] present) = single driver pass; layered =
-two solo passes + numpy mixdown (vocal role +6dB, 2s entries, 4s outro).
+    agent/mashpit render <arrangement.json> [--tier preview|full] [--out FILE]
+    agent/mashpit analyze <audio> [--out sidecar.json]
+    agent/mashpit edit <arrangement.json> --op match_bpm|smooth [opts]
+    agent/mashpit snippet <arrangement.json> --from-sec A --to-sec B
+    agent/mashpit qc <render.wav>
+    agent/mashpit undo <arrangement.json>
 """
 import json
 import math
@@ -107,6 +105,20 @@ def load_doc(path):
         return None, f"invalid JSON in {path}: {exc}"
 
 
+def sidecar_for(audio_path):
+    """Sidecar convention: <audio>.analysis.json next to the file."""
+    import glob
+    cands = [audio_path + ".analysis.json"]
+    base, _ = os.path.splitext(audio_path)
+    cands.append(base + ".analysis.json")
+    for c in cands:
+        if os.path.isfile(c):
+            with open(c) as fh:
+                return json.load(fh), None
+    return None, (f"no sidecar for {audio_path} "
+                  "(run: agent/mashpit analyze <audio> first)")
+
+
 def cmd_validate(argv):
     if len(argv) < 3:
         print("usage: agent/mashpit validate <arrangement.json> [--quiet]")
@@ -131,6 +143,229 @@ def cmd_validate(argv):
 
 def sec_per_bar(bpm):
     return 60.0 / bpm * 4.0
+
+
+def cmd_analyze(argv):
+    import argparse
+    ap = argparse.ArgumentParser(prog="agent/mashpit analyze")
+    ap.add_argument("audio")
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--analyzer", default=os.environ.get("MASHPT_ANALYZER"))
+    ns = ap.parse_args(argv[2:])
+    if not ns.analyzer or not os.path.isfile(ns.analyzer):
+        print("need the analyzer binary: set MASHPT_ANALYZER "
+              "(glue/analyze.cpp -> mashpit-analyze)")
+        return 2
+    if not os.path.isfile(ns.audio):
+        print(f"no such file: {ns.audio}")
+        return 2
+    out = ns.out or (ns.audio + ".analysis.json")
+    env = dict(os.environ)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    cmd = [ns.analyzer, os.path.abspath(ns.audio),
+           "--out", os.path.abspath(out)]
+    proc = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    err = (proc.stderr or "").strip().splitlines()
+    print(err[-1] if err else f"wrote {out}")
+    return proc.returncode
+
+
+HISTORY_MAX = 20
+
+
+def history_push(path, doc):
+    hist = path + ".history"
+    stack = []
+    if os.path.isfile(hist):
+        try:
+            with open(hist) as fh:
+                stack = json.load(fh)
+        except (json.JSONDecodeError, OSError):
+            stack = []
+    stack.append(doc)
+    with open(hist, "w") as fh:
+        json.dump(stack[-HISTORY_MAX:], fh)
+
+
+def cmd_undo(argv):
+    if len(argv) < 3:
+        print("usage: agent/mashpit undo <arrangement.json>")
+        return 2
+    path = argv[2]
+    hist = path + ".history"
+    if not os.path.isfile(hist):
+        print("nothing to undo")
+        return 1
+    with open(hist) as fh:
+        stack = json.load(fh)
+    if not stack:
+        print("nothing to undo")
+        return 1
+    prev = stack.pop()
+    with open(hist, "w") as fh:
+        json.dump(stack, fh)
+    with open(path, "w") as fh:
+        json.dump(prev, fh, indent=2)
+    print(f"undone: {path} restored ({len(stack)} steps left)")
+    return 0
+
+
+def describe_diff(old, new):
+    lines = []
+    if old.get("projectBpm") != new.get("projectBpm"):
+        lines.append(f"projectBpm {old.get('projectBpm')} -> {new.get('projectBpm')}")
+    old_clips = {c.get("track"): c for c in old.get("clips", [])}
+    for c in new.get("clips", []):
+        o = old_clips.get(c.get("track"), {})
+        for k in ("tempoRatio", "pitchSemi", "atBar", "bars"):
+            if o.get(k) != c.get(k):
+                lines.append(f"clip {c.get('track')}.{k}: {o.get(k)} -> {c.get(k)}")
+    if old.get("mix") != new.get("mix"):
+        lines.append(f"mix: {old.get('mix')} -> {new.get('mix')}")
+    return lines or ["(no changes)"]
+
+
+def cmd_edit(argv):
+    import argparse
+    import copy
+    ap = argparse.ArgumentParser(prog="agent/mashpit edit")
+    ap.add_argument("arrangement")
+    ap.add_argument("--op", required=True, choices=("match_bpm", "smooth"))
+    ap.add_argument("--track", default=None)
+    ap.add_argument("--at", type=float, default=None, help="seconds (smooth)")
+    ap.add_argument("--bars", type=int, default=8)
+    ap.add_argument("--dry-run", action="store_true")
+    ns = ap.parse_args(argv[2:])
+
+    doc, error = load_doc(ns.arrangement)
+    if error:
+        print(error)
+        return 2
+    problems = validate(doc)
+    if problems:
+        print("fix validation first:")
+        for kind, msg in problems:
+            print(f"  [{kind}] {msg}")
+        return 1
+    basedir = os.path.dirname(os.path.abspath(ns.arrangement))
+    new = copy.deepcopy(doc)
+
+    if ns.op == "match_bpm":
+        targets = [c for c in new["clips"]
+                   if ns.track is None or c.get("track") == ns.track]
+        if not targets:
+            print(f"no clips match track '{ns.track}'")
+            return 1
+        for c in targets:
+            tid = c["track"]
+            audio = next(t["file"] for t in new["tracks"] if t["id"] == tid)
+            if not os.path.isabs(audio):
+                audio = os.path.join(basedir, audio)
+            sc, serr = sidecar_for(audio)
+            if serr:
+                print(serr)
+                return 1
+            ratio = round(new["projectBpm"] / sc["bpm"], 4)
+            c["tempoRatio"] = ratio
+            print(f"{tid}: file {sc['bpm']}bpm -> ratio {ratio} (keylock on assumed)")
+    elif ns.op == "smooth":
+        if ns.at is None:
+            print("--op smooth needs --at SECONDS")
+            return 2
+        spb = sec_per_bar(new["projectBpm"])
+        at_bar = round(ns.at / spb) + 1
+        entry = {"atBar": at_bar, "bars": ns.bars, "xfade": "equal-power"}
+        if new["mix"]:
+            new["mix"][0].update(entry)
+            print(f"xfade widened to {ns.bars} bars @bar {at_bar}")
+        else:
+            new["mix"].append(entry)
+            print(f"xfade written: {ns.bars} bars @bar {at_bar}")
+
+    for line in describe_diff(doc, new):
+        print(f"  diff {line}")
+    if ns.dry_run:
+        print("(dry run — arrangement untouched)")
+        return 0
+    history_push(ns.arrangement, doc)
+    with open(ns.arrangement, "w") as fh:
+        json.dump(new, fh, indent=2)
+    print(f"wrote {ns.arrangement}")
+    return 0
+
+
+def cmd_snippet(argv):
+    import argparse
+    import wave
+    ap = argparse.ArgumentParser(prog="agent/mashpit snippet")
+    ap.add_argument("arrangement")
+    ap.add_argument("--from-sec", type=float, required=True)
+    ap.add_argument("--to-sec", type=float, required=True)
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--tier", default="preview")
+    ap.add_argument("--driver", default=os.environ.get("MASHPT_OFFLINE_DRIVER"))
+    ns = ap.parse_args(argv[2:])
+    if ns.to_sec <= ns.from_sec:
+        print("--to-sec must be after --from-sec")
+        return 2
+    # full preview render, then slice (stdlib wave only — no numpy needed)
+    full = os.path.join("/tmp/opencode", "mashpit-snippet-full.wav")
+    render_argv = ["mashpit", "render", ns.arrangement, "--tier", ns.tier,
+                   "--out", full]
+    if ns.driver:
+        render_argv += ["--driver", ns.driver]
+    rc = cmd_render(render_argv)
+    if rc != 0:
+        return rc
+    out = ns.out or "snippet.wav"
+    with wave.open(full, "rb") as w:
+        sr, n = w.getframerate(), w.getnframes()
+        raw = w.readframes(n)
+        ch, sw = w.getnchannels(), w.getsampwidth()
+    a, b = int(ns.from_sec * sr), int(ns.to_sec * sr)
+    frame_bytes = ch * sw
+    with wave.open(out, "wb") as w:
+        w.setnchannels(ch)
+        w.setsampwidth(sw)
+        w.setframerate(sr)
+        w.writeframes(raw[a * frame_bytes:b * frame_bytes])
+    print(f"wrote {out} ({ns.from_sec}-{ns.to_sec}s)")
+    return 0
+
+
+def cmd_qc(argv):
+    import argparse
+    import struct
+    import wave
+    ap = argparse.ArgumentParser(prog="agent/mashpit qc")
+    ap.add_argument("wav")
+    ns = ap.parse_args(argv[2:])
+    with wave.open(ns.wav, "rb") as w:
+        n, sr, ch, sw = w.getnframes(), w.getframerate(), w.getnchannels(), w.getsampwidth()
+        raw = w.readframes(n)
+    fmt = "<%dh" % (n * ch) if sw == 2 else "<%df" % (n * ch)
+    try:
+        vals = struct.unpack(fmt, raw[: n * ch * sw])
+    except struct.error:
+        print("qc: unsupported sample width (need 16-bit PCM or float32)")
+        return 2
+    peak = max(abs(v) for v in vals) / (32768 if sw == 2 else 1.0)
+    clipped = sum(1 for v in vals if abs(v) >= (32767 if sw == 2 else 1.0)) / len(vals)
+    win = sr  # 1s windows for silence scan
+    silent = sum(1 for i in range(0, len(vals), win)
+                 if max(abs(v) for v in vals[i:i + win]) < (200 if sw == 2 else 0.006))
+    mean_sq = sum((v / (32768 if sw == 2 else 1.0)) ** 2 for v in vals) / len(vals)
+    import math
+    rms_db = 10 * math.log10(mean_sq + 1e-12)
+    print(f"qc {ns.wav}: {n / sr:.1f}s peak={peak:.3f} "
+          f"clipped={clipped * 100:.2f}% silent_windows={silent} rms={rms_db:.1f}dB")
+    bad = []
+    if clipped > 0.001:
+        bad.append("clipping — pull gains down")
+    if peak < 0.1:
+        bad.append("very quiet — check gains/mutes")
+    print("qc " + ("FAIL: " + "; ".join(bad) if bad else "PASS"))
+    return 1 if bad else 0
 
 
 def bar_to_sec(bar, spb):
@@ -281,13 +516,14 @@ def cmd_render(argv):
 def main(argv):
     if len(argv) < 2:
         print(__doc__.strip().splitlines()[0])
-        print("usage: agent/mashpit (validate|render) ...")
+        print("usage: agent/mashpit (validate|render|analyze|edit|snippet|qc|undo) ...")
         return 2
-    if argv[1] == "validate":
-        return cmd_validate(argv)
-    if argv[1] == "render":
-        return cmd_render(argv)
-    print(f"unknown command '{argv[1]}' (validate|render)")
+    cmds = {"validate": cmd_validate, "render": cmd_render,
+            "analyze": cmd_analyze, "edit": cmd_edit,
+            "snippet": cmd_snippet, "qc": cmd_qc, "undo": cmd_undo}
+    if argv[1] in cmds:
+        return cmds[argv[1]](argv)
+    print(f"unknown command '{argv[1]}' (validate|render|analyze|edit|snippet|qc|undo)")
     return 2
 
 

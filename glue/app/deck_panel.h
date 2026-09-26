@@ -21,6 +21,14 @@ class DeckPanel : public QWidget {
     void setPlayPos(double frac);
     void refreshReadouts();
 
+    // Arrangement/copilot API (all honest, all wired).
+    bool loadFilePath(const QString& path); // false = load failed
+    void setFileBpm(double bpm);
+    void setRatio(double ratio);   // slider + engine
+    void setKeySemi(int semis);
+    void adjustVolumeDb(double db);
+    double fileBpm() const;
+
   signals:
     void syncRequested(int deck, double fileBpm);
 

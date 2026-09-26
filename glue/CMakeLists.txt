@@ -14,3 +14,10 @@ target_link_libraries(offline-driver PRIVATE
   mixxx-lib mixxx-gitinfostore Qt5::Core Qt5::Widgets ${SNDFILE_LIBRARIES})
 
 add_subdirectory(app)
+
+add_executable(mashpit-analyze analyze.cpp)
+target_include_directories(mashpit-analyze PRIVATE
+  ${MASHPT_MIXXX_SRC}
+  ${SNDFILE_INCLUDE_DIRS})
+target_link_libraries(mashpit-analyze PRIVATE
+  mixxx-lib mixxx-gitinfostore Qt5::Core ${SNDFILE_LIBRARIES})

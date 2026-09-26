@@ -26,8 +26,11 @@ int runSelftest(DeckEngine& engine, const QString& file) {
     return peak > 1e-6 ? 0 : 4;
 }
 
-int runScreenshot(DeckEngine& engine, const QString& path) {
+int runScreenshot(DeckEngine& engine, const QString& path, const QString& arrangement) {
     MainWindow win(&engine);
+    if (!arrangement.isEmpty()) {
+        win.openArrangementPath(arrangement);
+    }
     win.show();
     QApplication::processEvents();
     QThread::msleep(400);
@@ -56,10 +59,11 @@ int main(int argc, char** argv) {
     }
 
     // Layout verification for headless dev:
-    //   mashpit-app --screenshot out.png
-    if (argc == 3 && QString(argv[1]) == "--screenshot") {
+    //   mashpit-app --screenshot out.png [arrangement.json]
+    if ((argc == 3 || argc == 4) && QString(argv[1]) == "--screenshot") {
         DeckEngine engine;
-        return runScreenshot(engine, QString::fromLocal8Bit(argv[2]));
+        return runScreenshot(engine, QString::fromLocal8Bit(argv[2]),
+                argc == 4 ? QString::fromLocal8Bit(argv[3]) : QString());
     }
 
     DeckEngine engine;

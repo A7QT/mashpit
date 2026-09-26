@@ -3,6 +3,8 @@
 #include <QDoubleSpinBox>
 #include <QDir>
 #include <QFileDialog>
+
+#include <cmath>
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -174,6 +176,10 @@ void DeckPanel::onLoad() {
     if (path.isEmpty()) {
         return;
     }
+    loadFilePath(path);
+}
+
+bool DeckPanel::loadFilePath(const QString& path) {
     m_pFileLabel->setText(QFileInfo(path).fileName());
     m_pFileLabel->setToolTip(path);
     m_pWave->setFile(path);
@@ -181,7 +187,32 @@ void DeckPanel::onLoad() {
     if (!err.isEmpty()) {
         m_pFileLabel->setText(QStringLiteral("LOAD FAILED: ") + QFileInfo(path).fileName());
         m_pWave->setFile(QString());
+        return false;
     }
+    return true;
+}
+
+void DeckPanel::setFileBpm(double bpm) {
+    m_pBpmSpin->setValue(bpm);
+}
+
+double DeckPanel::fileBpm() const {
+    return m_pBpmSpin->value();
+}
+
+void DeckPanel::setRatio(double ratio) {
+    m_pRate->setValue(int(qRound(ratio * 100.0)));
+}
+
+void DeckPanel::setKeySemi(int semis) {
+    m_key = qBound(-6, semis, 6);
+    m_pKeyLabel->setText(QString("%1%2 st").arg(m_key >= 0 ? "+" : "").arg(m_key));
+    m_pEngine->setKey(m_deck, m_key);
+}
+
+void DeckPanel::adjustVolumeDb(double db) {
+    const double vol = qBound(0.0, m_pVol->value() / 100.0 * std::pow(10.0, db / 20.0), 1.0);
+    m_pVol->setValue(int(qRound(vol * 100.0)));
 }
 
 void DeckPanel::onSync() {

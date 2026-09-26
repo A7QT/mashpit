@@ -16,7 +16,10 @@ add_executable(mashpit-app
   deck_panel.cpp
   deck_engine.cpp
   jog_widget.cpp
-  waveform_widget.cpp)
+  waveform_widget.cpp
+  timeline_widget.cpp
+  copilot_dock.cpp
+  arrangement.cpp)
 set_target_properties(mashpit-app PROPERTIES AUTOMOC ON)
 target_include_directories(mashpit-app PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
