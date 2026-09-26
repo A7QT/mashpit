@@ -1,6 +1,14 @@
 # glue/ — our C++ (the only C++ we write; upstreams stay pristine)
 
-## Planned targets (Phase 1)
+## Targets
+
+- `offline-driver` — LIVE NOW. Two-deck offline render: per-deck file, tempo
+  ratio (`rate_ratio`), gain (channel volume 0..1), key (`pitch_adjust`
+  semitones, keylock on), B-offset start, automated crossfader move over an
+  xfade zone (or CENTER-layered), PreviewTier (SoundTouch) / FullTier
+  (RubberBand Finer) via `[App],keylock_engine`. Honors the spike contracts:
+  pump-until-loaded, SAMPLES units, warmup trim by playposition.
+  Build: wired into the Mixxx tree via `MASHPT_GLUE_DIR` (see docs/SPIKE.md).
 
 - `DjDeckTrack : Track` + `DjDeckPlayHandle : PlayHandle` — owns one Mixxx
   `EngineBuffer + CachingReader + scaler`; driven by LMMS
