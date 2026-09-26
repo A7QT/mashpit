@@ -8,8 +8,8 @@ One new layer of glue holds them together. Both upstreams stay pristine
 as git submodules; **all our code lives in `glue/`, `spec/`, `agent/`**.
 
 ```
-upstream/mixxx  @ 2.5.6  (Qt5, CMake, GPLv2+)
-upstream/lmms   @ v1.2.2 (Qt5, CMake, GPLv2+)
+upstream/mixxx  @ 2.4 branch  (Qt5 — last Qt5 series; ≥2.5 is Qt6, unlinkable)
+upstream/lmms   @ v1.2.2      (Qt5.15)
 ```
 
 ### Keep from Mixxx (`src/` paths in upstream)

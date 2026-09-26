@@ -4,8 +4,10 @@ We are lifting Mixxx's deck UI design — layout, controls, behaviors, tooltips 
 into mashpit. Mixxx is GPLv2+ and so are we: keep license headers on anything
 copied, note the origin file in a comment. This doc maps the loot.
 
-Reference installation (verified): Mixxx **2.5.6**, skins at
-`/usr/share/mixxx/skins/`. Reference skin: **LateNight**.
+Inspected on disk (verified): Mixxx **2.5.6** skins at
+`/usr/share/mixxx/skins/`. Reference skin: **LateNight**. Engine graft target is
+the **2.4 branch** (Qt5) — re-verify control parity there during the spike;
+control names below come from 2.5.6 skins and are expected stable.
 
 ## 1. How Mixxx skins work (5-minute version)
 

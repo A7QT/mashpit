@@ -45,7 +45,9 @@ hovering *is* the manual. If a tooltip lies, that's a bug: fix the control, not 
 
 ## Environment (verified on this machine)
 
-- Mixxx **2.5.6**, LMMS **1.2.2**, Qt **5.15** (both Qt5-era — they link happy together)
+- Mixxx **2.4 branch** (Qt5, last Qt5 series) + LMMS **v1.2.2** (Qt5.15) — Qt5
+  unity is load-bearing (Mixxx ≥ 2.5 is Qt6 and cannot link into an LMMS-Qt5
+  binary). The distro Mixxx 2.5.6 install is reference/behavior only.
 - System libs: `librubberband.so.3`, `libSoundTouch.so.2`
 - Mixxx skins on disk: `/usr/share/mixxx/skins/` (LateNight is the reference skin)
 - Mixxx DB (beatgrids/cues live here): `~/.mixxx/mixxxdb.sqlite`
