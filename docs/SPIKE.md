@@ -48,9 +48,16 @@ Mixxx 2.4 (`mixxx/CMakeLists.txt`):
 ## Build status
 
 - [x] LMMS 1.2.2: configured + built, `lmms-build/lmms --version` runs (Qt 5.15).
-- [ ] Mixxx 2.4: configured; `mixxx` target building (background).
-- [ ] NEXT: isolated harness — construct Mixxx `EngineBuffer` + `CachingReader`
-  + scaler with no `SoundManager`, drive `process()` with LMMS-sized blocks
-  (`framesPerPeriod`) in a loop, write WAV, compare vs Mixxx's own recording.
-  Gates: no `UNAVAILABLE` stalls, worker pools sane under burst pacing
-  (see ROADMAP.md Phase 0 exit gate).
+- [~] Mixxx 2.4: `mixxx-lib` links; `mixxx` exe target compiling.
+  NOTE: build with `CPLUS_INCLUDE_PATH=<spike>/prefix/include` and
+  `LIBRARY_PATH=<spike>/prefix/lib64` exported (GSL includes don't propagate
+  to the exe target's PCH through the PRIVATE link).
+- [ ] NEXT: `spike-harness/` (written, in scratch area) — mirrors Mixxx's own
+  `src/test/signalpathtest.h` fixtures: `TestEngineMixer` subclass forcing
+  main/head/booth on, real `Deck`, `Track::newTemporary(file)`,
+  `SoundSourceProxy::registerProviders()`, keylock on, `mixer.process(N)`
+  in a loop, WAV out via libsndfile. Non-zero exit on stall (playposition
+  stops) or all-silence output. Wire-in: append to `mixxx/CMakeLists.txt`
+  (scratch) `option(MIXXX_SPIKE_HARNESS …)` + `add_subdirectory`.
+  Run: `QT_QPA_PLATFORM=offscreen spike-harness song.mp3 out.wav 2000 256`
+  (LMMS-sized 256-frame blocks, burst-paced — the hostile case).
