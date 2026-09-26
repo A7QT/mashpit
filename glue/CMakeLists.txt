@@ -12,3 +12,5 @@ target_include_directories(offline-driver PRIVATE
   ${SNDFILE_INCLUDE_DIRS})
 target_link_libraries(offline-driver PRIVATE
   mixxx-lib mixxx-gitinfostore Qt5::Core Qt5::Widgets ${SNDFILE_LIBRARIES})
+
+add_subdirectory(app)
