@@ -66,6 +66,8 @@ struct Args {
     double xfadeAt = -1.0;
     double xfadeBars = 0.0;
     double bpm = 128.0;
+    bool aOnly = false;
+    bool bOnly = false;
     // EngineBuffer::KeylockEngine: SoundTouch=0, RubberBandFaster=1, Finer=2.
     int tier = 0;
 };
@@ -129,6 +131,10 @@ bool parse(Args* args, int argc, char** argv) {
         } else if (flag == "--bpm") {
             if (!need("--bpm", &val)) return false;
             args->bpm = atof(val.c_str());
+        } else if (flag == "--a-only") {
+            args->aOnly = true;
+        } else if (flag == "--b-only") {
+            args->bOnly = true;
         } else {
             say("unknown flag %s", flag.c_str());
             return false;
@@ -256,6 +262,14 @@ int main(int argc, char** argv) {
 
     const ConfigKey kPlayB(kDeckB, QStringLiteral("play"));
     const ConfigKey kXfader(kMasterGroup, QStringLiteral("crossfader"));
+    if (args.aOnly) {
+        ControlObject::set(ConfigKey(kDeckB, QStringLiteral("mute")), 1.0);
+        say("solo: deck A only");
+    }
+    if (args.bOnly) {
+        ControlObject::set(ConfigKey(kDeckA, QStringLiteral("mute")), 1.0);
+        say("solo: deck B only");
+    }
     double peak = 0.0;
     double mixTime = 0.0;
     bool bStarted = args.bOffset <= 0;

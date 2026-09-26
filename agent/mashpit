@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
-"""mashpit CLI — Phase 1a: `validate` is live. `render` lands in Phase 1b.
+"""mashpit CLI — Phase 1b: `validate` + `render` (OfflineDriver) live.
 
 Usage:
     agent/mashpit validate <arrangement.json> [--quiet]
+    agent/mashpit render <arrangement.json> [--tier preview|full]
+        [--out FILE] [--driver PATH] [--frames N]
 
-Exit 0 = valid, 1 = invalid, 2 = usage/file error.
-Rules implement docs/ARCHITECTURE.md section 2 (validator paragraph).
+render needs MASHPT_OFFLINE_DRIVER env (or --driver) pointing at the
+glue/offline-driver binary, and numpy for the layered path.
+v1 limits: 1-2 clips, first clip starts at bar 1, files resolve relative
+to the JSON. Sequential (mix[] present) = single driver pass; layered =
+two solo passes + numpy mixdown (vocal role +6dB, 2s entries, 4s outro).
 """
 import json
+import math
+import os
+import subprocess
 import sys
 
 TEMPO_LO, TEMPO_HI = 0.92, 1.08
 PITCH_MAX = 6
+ENGINE_SR = 44100
 
 
 def err(msg, hint):
@@ -88,20 +97,24 @@ def validate(doc):
     return problems
 
 
-def main(argv):
-    if len(argv) != 3 or argv[1] != "validate":
-        print(__doc__.strip().splitlines()[0])
+def load_doc(path):
+    try:
+        with open(path) as fh:
+            return json.load(fh), None
+    except FileNotFoundError:
+        return None, f"no such file: {path}"
+    except json.JSONDecodeError as exc:
+        return None, f"invalid JSON in {path}: {exc}"
+
+
+def cmd_validate(argv):
+    if len(argv) < 3:
         print("usage: agent/mashpit validate <arrangement.json> [--quiet]")
         return 2
     path, quiet = argv[2], "--quiet" in argv
-    try:
-        with open(path) as fh:
-            doc = json.load(fh)
-    except FileNotFoundError:
-        print(f"no such file: {path}")
-        return 2
-    except json.JSONDecodeError as exc:
-        print(f"invalid JSON in {path}: {exc}")
+    doc, error = load_doc(path)
+    if error:
+        print(error)
         return 2
     problems = validate(doc)
     if not problems:
@@ -114,6 +127,168 @@ def main(argv):
         for kind, msg in problems:
             print(f"  [{kind}] {msg}")
     return 1
+
+
+def sec_per_bar(bpm):
+    return 60.0 / bpm * 4.0
+
+
+def bar_to_sec(bar, spb):
+    return (bar - 1) * spb
+
+
+def run_driver(driver, args, workdir):
+    print("  $ offline-driver " + " ".join(args))
+    env = dict(os.environ)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    proc = subprocess.run([driver] + args, cwd=workdir, env=env,
+                          capture_output=True, text=True)
+    for line in (proc.stderr or "").strip().splitlines()[-4:]:
+        print(f"    | {line}")
+    return proc.returncode
+
+
+def cmd_render(argv):
+    import argparse  # local import: keeps `validate` dependency-free
+    ap = argparse.ArgumentParser(prog="agent/mashpit render")
+    ap.add_argument("arrangement")
+    ap.add_argument("--tier", default="preview", choices=("preview", "full"))
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--driver", default=os.environ.get("MASHPT_OFFLINE_DRIVER"))
+    ap.add_argument("--frames", type=int, default=256)
+    ap.add_argument("--workdir", default="/tmp/opencode/mashpit-render")
+    ns = ap.parse_args(argv[2:])
+
+    doc, error = load_doc(ns.arrangement)
+    if error:
+        print(error)
+        return 2
+    problems = validate(doc)
+    if problems:
+        print(f"invalid: {ns.arrangement} ({len(problems)} problems, fix first)")
+        for kind, msg in problems:
+            print(f"  [{kind}] {msg}")
+        return 1
+    if not ns.driver or not os.path.isfile(ns.driver):
+        print("need the OfflineDriver binary: set MASHPT_OFFLINE_DRIVER "
+              "(glue/offline_driver.cpp, built via MASHPT_GLUE_DIR)")
+        return 2
+    clips = doc["clips"]
+    if not 1 <= len(clips) <= 2:
+        print("render v1 supports 1-2 clips "
+              f"(got {len(clips)} — DjDeckTrack multideck lands later)")
+        return 2
+    if clips[0].get("atBar", 1) != 1:
+        print("render v1 needs the first clip at bar 1 "
+              "(clip offsets beyond B land with DjDeckTrack)")
+        return 2
+    basedir = os.path.dirname(os.path.abspath(ns.arrangement))
+    bpm = doc["projectBpm"]
+    spb = sec_per_bar(bpm)
+    track_file = {}
+    for t in doc["tracks"]:
+        p = t["file"]
+        if not os.path.isabs(p):
+            p = os.path.join(basedir, p)
+        track_file[t["id"]] = p
+    for tid, p in track_file.items():
+        if not os.path.isfile(p):
+            print(f"missing audio file for track '{tid}': {p}")
+            return 2
+    os.makedirs(ns.workdir, exist_ok=True)
+    out = ns.out or os.path.join(ns.workdir, "mash.wav")
+    frames = ns.frames
+    if frames % 2:
+        print("frames must be even (stereo SAMPLES units downstream)")
+        return 2
+
+    def clip_end(c):
+        return bar_to_sec(c["atBar"] + c["bars"], spb)
+
+    if doc["mix"]:
+        mx = doc["mix"][0]
+        total = max(clip_end(c) for c in clips) + 2.0
+        blocks = math.ceil(total * ENGINE_SR / frames) + 8
+        a, b = clips[0], clips[1] if len(clips) > 1 else None
+        cmd = ["--a", track_file[a["track"]], "--out", out,
+               "--blocks", str(blocks), "--frames", str(frames),
+               "--a-ratio", str(a.get("tempoRatio", 1.0)),
+               "--a-key", str(a.get("pitchSemi", 0)),
+               "--bpm", str(bpm), "--tier", ns.tier]
+        if b is not None:
+            cmd += ["--b", track_file[b["track"]],
+                    "--b-ratio", str(b.get("tempoRatio", 1.0)),
+                    "--b-key", str(b.get("pitchSemi", 0)),
+                    "--b-offset", str(bar_to_sec(b["atBar"], spb)),
+                    "--xfade-at", str(bar_to_sec(mx["atBar"], spb)),
+                    "--xfade-bars", str(mx["bars"])]
+        else:
+            cmd += ["--b", track_file[a["track"]], "--b-gain", "0"]
+        rc = run_driver(ns.driver, cmd, ns.workdir)
+        print(f"wrote {out}" if rc == 0 else "render FAILED")
+        return rc
+
+    # layered path: solo passes + numpy mixdown
+    import numpy as np  # noqa: E402
+    roles = {t["id"]: t.get("role", "other") for t in doc["tracks"]}
+    stems = []
+    for i, c in enumerate(clips):
+        stem_wav = os.path.join(ns.workdir, f"stem{i}.wav")
+        total = clip_end(c) + 1.0
+        blocks = math.ceil(total * ENGINE_SR / frames) + 8
+        cmd = ["--a", track_file[c["track"]], "--b", track_file[c["track"]],
+               "--out", stem_wav, "--blocks", str(blocks), "--frames", str(frames),
+               "--a-ratio", str(c.get("tempoRatio", 1.0)),
+               "--a-key", str(c.get("pitchSemi", 0)),
+               "--a-only", "--tier", ns.tier]
+        rc = run_driver(ns.driver, cmd, ns.workdir)
+        if rc != 0:
+            print("render FAILED")
+            return rc
+        stems.append((stem_wav, c))
+    import wave
+    mixed, sr = None, ENGINE_SR
+    for stem_wav, c in stems:
+        with wave.open(stem_wav, "rb") as w:
+            n = w.getnframes()
+            x = (np.frombuffer(w.readframes(n), dtype="<i2").astype(np.float32)
+                 / 32768).reshape(-1, 2)
+        gain_db = 6.0 if roles.get(c["track"]) == "vocal" else 0.0
+        x = x * (10 ** (gain_db / 20))
+        start = int(bar_to_sec(c["atBar"], spb) * sr)
+        need = start + len(x)
+        if mixed is None or len(mixed) < need:
+            pad = np.zeros((max(0, need - (len(mixed) if mixed is not None else 0)), 2),
+                           dtype=np.float32)
+            mixed = pad if mixed is None else np.vstack([mixed, pad])
+        if c["atBar"] > 1:
+            fin = min(int(2 * sr), len(x))
+            x[:fin] *= (0.5 - 0.5 * np.cos(np.linspace(0, np.pi, fin)))[:, None]
+        mixed[start:start + len(x)] += x
+    fout = int(4 * sr)
+    mixed[-fout:] *= (0.5 + 0.5 * np.cos(np.linspace(0, np.pi, fout)))[:, None]
+    mixed /= max(1e-9, np.abs(mixed).max())
+    mixed *= 0.89
+    with wave.open(out, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes((np.clip(mixed, -1, 1) * 32767).astype("<i2").tobytes())
+    print(f"wrote {out} ({len(mixed) / sr:.1f}s, layered {len(stems)} stems)")
+    return 0
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip().splitlines()[0])
+        print("usage: agent/mashpit (validate|render) ...")
+        return 2
+    if argv[1] == "validate":
+        return cmd_validate(argv)
+    if argv[1] == "render":
+        return cmd_render(argv)
+    print(f"unknown command '{argv[1]}' (validate|render)")
+    return 2
 
 
 if __name__ == "__main__":
