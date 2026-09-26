@@ -7,9 +7,12 @@
 
 #include "control/control.h"
 #include "control/controlindicatortimer.h"
+#include "control/controlobject.h"
 #include "effects/effectsmanager.h"
 #include "engine/channelhandle.h"
 #include "engine/channels/enginechannel.h"
+#include "engine/channels/enginedeck.h"
+#include "engine/enginebuffer.h"
 #include "mixer/deck.h"
 #include "preferences/usersettings.h"
 #include "sources/soundsourceproxy.h"
@@ -181,6 +184,31 @@ void DeckEngine::jumpBeats(int deck, int beats) {
 
 void DeckEngine::cueGo(int deck) {
     Q_UNUSED(deck);
+}
+
+void DeckEngine::seekFraction(int deck, double frac) {
+    if (deck < 0 || deck > 1) {
+        return;
+    }
+    EngineBuffer* pBuffer = m_pDecks[deck]->getEngineDeck()->getEngineBuffer();
+    if (pBuffer == nullptr || !pBuffer->isTrackLoaded()) {
+        return;
+    }
+    const double end = pBuffer->getTrackEndPosition().value();
+    if (end > 0) {
+        pBuffer->queueNewPlaypos(mixxx::audio::FramePos(
+                qBound(0.0, frac, 1.0) * end), EngineBuffer::SEEK_STANDARD);
+    }
+}
+
+double DeckEngine::playPos(int deck) const {
+    return ControlObject::get(
+            ConfigKey(m_groups[deck], QStringLiteral("playposition")));
+}
+
+double DeckEngine::tempoRatio(int deck) const {
+    return ControlObject::get(
+            ConfigKey(m_groups[deck], QStringLiteral("rate_ratio")));
 }
 
 bool DeckEngine::isLoaded(int deck) const {

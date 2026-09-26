@@ -104,4 +104,8 @@ void MainWindow::onVuTick() {
     const int v = qBound(0, int(m_vuShown), 100);
     m_pVuL->setValue(v);
     m_pVuR->setValue(v);
+    for (int i = 0; i < 2; ++i) {
+        m_pDecks[i]->setPlayPos(m_pEngine->playPos(i));
+        m_pDecks[i]->refreshReadouts();
+    }
 }

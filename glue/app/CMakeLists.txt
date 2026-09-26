@@ -6,6 +6,7 @@
 find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
+pkg_check_modules(SNDFILE REQUIRED sndfile)
 
 set(MASHPT_SPIKE_DIR "" CACHE PATH "Spike scratch root (prefix/, spike-stub/)")
 
@@ -13,15 +14,19 @@ add_executable(mashpit-app
   main.cpp
   main_window.cpp
   deck_panel.cpp
-  deck_engine.cpp)
+  deck_engine.cpp
+  jog_widget.cpp
+  waveform_widget.cpp)
 set_target_properties(mashpit-app PROPERTIES AUTOMOC ON)
 target_include_directories(mashpit-app PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${MASHPT_MIXXX_SRC}
   ${MASHPT_SPIKE_DIR}/prefix/include
   ${MASHPT_SPIKE_DIR}/spike-stub
-  ${PORTAUDIO_INCLUDE_DIRS})
+  ${PORTAUDIO_INCLUDE_DIRS}
+  ${SNDFILE_INCLUDE_DIRS})
 target_link_directories(mashpit-app PRIVATE
   ${MASHPT_SPIKE_DIR}/prefix/lib64)
 target_link_libraries(mashpit-app PRIVATE
-  mixxx-lib mixxx-gitinfostore Qt5::Core Qt5::Widgets ${PORTAUDIO_LIBRARIES})
+  mixxx-lib mixxx-gitinfostore Qt5::Core Qt5::Widgets
+  ${PORTAUDIO_LIBRARIES} ${SNDFILE_LIBRARIES})

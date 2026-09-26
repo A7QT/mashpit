@@ -1,10 +1,12 @@
-// mashpit app v1 — one deck panel. Everything here is wired to DeckEngine;
-// anything not yet backed (hotcues, loops, FX sends) is OMITTED, not faked.
+// mashpit app v1 — one deck panel. Everything visible is wired to DeckEngine;
+// anything not yet backed (hotcues, loops, FX sends, H/M) is OMITTED, not faked.
 #pragma once
 
 #include <QWidget>
 
 class DeckEngine;
+class JogWidget;
+class WaveformWidget;
 class QLabel;
 class QPushButton;
 class QSlider;
@@ -16,19 +18,29 @@ class DeckPanel : public QWidget {
   public:
     DeckPanel(int deck, DeckEngine* pEngine, const QString& accent, QWidget* pParent = nullptr);
 
+    void setPlayPos(double frac);
+    void refreshReadouts();
+
+  signals:
+    void syncRequested(int deck, double fileBpm);
+
   private:
     void onLoad();
     void onSync();
     void onKey(int delta);
+    void onCue();
+    void onEq();
 
     int m_deck;
     DeckEngine* m_pEngine;
+    JogWidget* m_pJog;
+    WaveformWidget* m_pWave;
     QLabel* m_pFileLabel;
     QLabel* m_pKeyLabel;
+    QLabel* m_pRatioLabel;
     QDoubleSpinBox* m_pBpmSpin;
     QSlider* m_pRate;
+    QSlider* m_pVol;
+    QSlider* m_pEq[3] = {nullptr, nullptr, nullptr};
     int m_key = 0;
-
-  signals:
-    void syncRequested(int deck, double fileBpm);
 };

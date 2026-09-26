@@ -60,6 +60,10 @@ class DeckEngine : public QObject {
     void jumpBeats(int deck, int beats);
     void cueGo(int deck);
 
+    void seekFraction(int deck, double frac); // 0..1, quantized per Quantize
+    double playPos(int deck) const;           // 0..1 file playposition
+    double tempoRatio(int deck) const;        // exact speed multiplier
+
     double peak() const {
         return m_peak.load();
     }
