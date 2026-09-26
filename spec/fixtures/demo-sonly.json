@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "projectBpm": 124,
+  "tracks": [
+    {"id": "solo", "file": "a.mp3", "role": "instrumental"}
+  ],
+  "clips": [
+    {"track": "solo", "atBar": 1, "bars": 8}
+  ],
+  "mix": []
+}

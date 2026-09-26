@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "projectBpm": 128,
+  "tracks": [
+    {"id": "inst", "file": "a.mp3"}
+  ],
+  "clips": [
+    {"track": "inst", "atBar": 1, "bars": 8, "pitchSemi": 9},
+    {"track": "inst", "atBar": 5, "bars": 8, "tempoRatio": 1.3},
+    {"track": "ghost", "atBar": 1, "bars": 4}
+  ],
+  "mix": [
+    {"atBar": 20, "bars": 8}
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/A7QT/mashpit/spec/mashup.schema.json",
+  "title": "mashup arrangement v1",
+  "description": "Single contract between copilot, CLI, GUI and renderer. Bars are musical truth; seconds derive via projectBpm (secPerBar = 60/bpm*4). See docs/ARCHITECTURE.md.",
+  "type": "object",
+  "required": ["version", "projectBpm", "tracks", "clips", "mix"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "projectBpm": {"type": "number", "minimum": 60, "maximum": 200},
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["id", "file"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "file": {"type": "string", "minLength": 1},
+          "role": {"enum": ["instrumental", "vocal", "drums", "other"]}
+        }
+      }
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["track", "atBar", "bars"],
+        "additionalProperties": false,
+        "properties": {
+          "track": {"type": "string", "minLength": 1},
+          "atBar": {"type": "number", "minimum": 1},
+          "bars": {"type": "number", "minimum": 1},
+          "tempoRatio": {"type": "number", "minimum": 0.5, "maximum": 2.0, "default": 1.0},
+          "pitchSemi": {"type": "integer", "minimum": -12, "maximum": 12, "default": 0}
+        }
+      }
+    },
+    "mix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["atBar", "bars"],
+        "additionalProperties": false,
+        "properties": {
+          "atBar": {"type": "number", "minimum": 1},
+          "bars": {"type": "number", "minimum": 1},
+          "xfade": {"enum": ["equal-power", "linear", "cut"], "default": "equal-power"},
+          "eq": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "low": {"type": "number", "minimum": -12, "maximum": 12},
+              "mid": {"type": "number", "minimum": -12, "maximum": 12},
+              "high": {"type": "number", "minimum": -12, "maximum": 12}
+            }
+          }
+        }
+      }
+    }
+  }
+}

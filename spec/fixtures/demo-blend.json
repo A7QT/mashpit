@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "projectBpm": 128,
+  "tracks": [
+    {"id": "inst", "file": "a.mp3", "role": "instrumental"},
+    {"id": "vox", "file": "b.mp3", "role": "vocal"}
+  ],
+  "clips": [
+    {"track": "inst", "atBar": 1, "bars": 16, "tempoRatio": 1.0, "pitchSemi": 0},
+    {"track": "vox", "atBar": 9, "bars": 16, "tempoRatio": 1.02, "pitchSemi": -1}
+  ],
+  "mix": [
+    {"atBar": 9, "bars": 8, "xfade": "equal-power", "eq": {"low": -2, "mid": 0, "high": 1}}
+  ]
+}

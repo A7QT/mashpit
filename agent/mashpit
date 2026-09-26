@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""mashpit CLI — Phase 1a: `validate` is live. `render` lands in Phase 1b.
+
+Usage:
+    agent/mashpit validate <arrangement.json> [--quiet]
+
+Exit 0 = valid, 1 = invalid, 2 = usage/file error.
+Rules implement docs/ARCHITECTURE.md section 2 (validator paragraph).
+"""
+import json
+import sys
+
+TEMPO_LO, TEMPO_HI = 0.92, 1.08
+PITCH_MAX = 6
+
+
+def err(msg, hint):
+    return ("error", f"{msg}  -> fix: {hint}")
+
+
+def check_schema(doc):
+    problems = []
+    if not isinstance(doc, dict):
+        return [err("top level must be an object", "wrap the arrangement in {...}")]
+    for key in ("version", "projectBpm", "tracks", "clips", "mix"):
+        if key not in doc:
+            problems.append(err(f"missing required key '{key}'", f"add \"{key}\" (see spec/mashup.schema.json)"))
+    if doc.get("version") != 1:
+        problems.append(err(f"unsupported version {doc.get('version')!r}", "set \"version\": 1"))
+    bpm = doc.get("projectBpm")
+    if not isinstance(bpm, (int, float)) or not 60 <= bpm <= 200:
+        problems.append(err(f"projectBpm {bpm!r} out of range", "pick 60..200"))
+    for name in ("tracks", "clips", "mix"):
+        if name in doc and not isinstance(doc[name], list):
+            problems.append(err(f"'{name}' must be an array", f"make \"{name}\" a [...] list"))
+    return problems
+
+
+def validate(doc):
+    problems = check_schema(doc)
+    if problems:
+        return problems
+    tracks = {t["id"]: t for t in doc["tracks"] if isinstance(t, dict) and "id" in t}
+    if len(tracks) != len(doc["tracks"]):
+        problems.append(err("duplicate or id-less track", "give every track a unique string id"))
+    for i, clip in enumerate(doc["clips"]):
+        where = f"clips[{i}]"
+        tid = clip.get("track")
+        if tid not in tracks:
+            problems.append(err(f"{where} references unknown track '{tid}'",
+                                f"add it to \"tracks\" or point at one of {sorted(tracks)}"))
+        for key in ("atBar", "bars"):
+            v = clip.get(key)
+            if not isinstance(v, (int, float)) or v < 1:
+                problems.append(err(f"{where}.{key}={v!r} invalid", "use a number >= 1"))
+        ps = clip.get("pitchSemi", 0)
+        if not isinstance(ps, int) or abs(ps) > PITCH_MAX:
+            problems.append(err(f"{where}.pitchSemi={ps!r} beyond +-6",
+                                "keep within +-6 semitones (TUNABLE limit, see ARCHITECTURE.md)"))
+        tr = clip.get("tempoRatio", 1.0)
+        if not isinstance(tr, (int, float)) or not TEMPO_LO <= tr <= TEMPO_HI:
+            problems.append(err(f"{where}.tempoRatio={tr!r} beyond +-8%",
+                                "enable keylock or pull toward 1.0 (TUNABLE limit)"))
+    # same-track overlap
+    by_track = {}
+    for clip in doc["clips"]:
+        by_track.setdefault(clip.get("track"), []).append(clip)
+    for tid, clips in by_track.items():
+        segs = sorted((c.get("atBar", 0), c.get("atBar", 0) + c.get("bars", 0)) for c in clips)
+        for (s1, e1), (s2, e2) in zip(segs, segs[1:]):
+            if s2 < e1:
+                problems.append(err(f"clips overlap on track '{tid}' (bar {s2} inside {s1}-{e1})",
+                                    "move one clip — one deck plays one clip at a time"))
+    # xfade needs overlapping clips
+    for j, mx in enumerate(doc["mix"]):
+        s, e = mx.get("atBar", 0), mx.get("atBar", 0) + mx.get("bars", 0)
+        overlaps = [tid for tid, clips in by_track.items()
+                    if any(c.get("atBar", 0) < e and s < c.get("atBar", 0) + c.get("bars", 0)
+                           for c in clips)]
+        if len(overlaps) < 2:
+            problems.append(err(f"mix[{j}] @bar {s} has no 2-clip overlap to blend",
+                                "slide clips so two overlap inside the xfade, or move the xfade"))
+        eq = mx.get("eq", {})
+        for band in ("low", "mid", "high"):
+            if band in eq and not -12 <= eq[band] <= 12:
+                problems.append(err(f"mix[{j}].eq.{band}={eq[band]!r} out of range",
+                                    "keep EQ within +-12 dB"))
+    return problems
+
+
+def main(argv):
+    if len(argv) != 3 or argv[1] != "validate":
+        print(__doc__.strip().splitlines()[0])
+        print("usage: agent/mashpit validate <arrangement.json> [--quiet]")
+        return 2
+    path, quiet = argv[2], "--quiet" in argv
+    try:
+        with open(path) as fh:
+            doc = json.load(fh)
+    except FileNotFoundError:
+        print(f"no such file: {path}")
+        return 2
+    except json.JSONDecodeError as exc:
+        print(f"invalid JSON in {path}: {exc}")
+        return 2
+    problems = validate(doc)
+    if not problems:
+        if not quiet:
+            clips = len(doc["clips"])
+            print(f"valid: {path} ({clips} clips @ {doc['projectBpm']}bpm)")
+        return 0
+    if not quiet:
+        print(f"invalid: {path} ({len(problems)} problems)")
+        for kind, msg in problems:
+            print(f"  [{kind}] {msg}")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

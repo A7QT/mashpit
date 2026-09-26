@@ -28,7 +28,9 @@ mashpit/
   demo3.html           prototype v3 — Mixxx-replica booth + tool UI (REFERENCE ONLY)
   app/                 interactive UI mockup (clickable spec for the real Qt UI —
                        the product itself is native, NOT a web app)
-  upstream/            (future) mixxx@2.5.6 + lmms@v1.2.2 submodules — pristine, never edit
+  upstream/            pinned pristine sources (pins.env + sync.sh — NOT
+                       submodules: git fights shallow checkouts, full history
+                       is gigabytes; same reproducibility, none of the weight)
   glue/                (future) our C++: DjDeckTrack, bridges, render driver
   spec/                (future) mashup.schema.json + fixtures
   agent/               (future) copilot MCP/CLI (mashpit_mcp)
