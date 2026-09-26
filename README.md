@@ -36,14 +36,39 @@ mashpit/
   agent/               (future) copilot MCP/CLI (mashpit_mcp)
 ```
 
-## Run the prototype
+## Run it (dev build — everything below is verified on this machine)
+
+One-time per shell (vendored taglib lives outside the system paths):
 
 ```sh
-xdg-open mashpit/demo3.html   # the keeper: Mixxx-style booth, timeline, mixer, copilot
+export SPIKE=/home/david/Documents/projects/personal/mashpit-spike
+export LD_LIBRARY_PATH=$SPIKE/prefix/lib64:$LD_LIBRARY_PATH
+export MASHPT_OFFLINE_DRIVER=$SPIKE/mixxx-build/mashpit-glue/offline-driver
+export MASHPT_ANALYZER=$SPIKE/mixxx-build/mashpit-glue/mashpit-analyze
 ```
 
-Drop audio files onto lanes, type file BPMs, SYNC, play. Everything has a tooltip —
-hovering *is* the manual. If a tooltip lies, that's a bug: fix the control, not the text.
+The app (needs a working audio device for live sound):
+
+```sh
+$SPIKE/mixxx-build/mashpit-glue/app/mashpit-app
+```
+
+The CLI (no audio device needed):
+
+```sh
+./agent/mashpit validate spec/fixtures/demo-blend.json
+./agent/mashpit render  spec/fixtures/demo-blend.json --tier preview
+./agent/mashpit analyze ~/Music/song.wav        # needs real audio, not fixtures
+./agent/mashpit edit    mashup.json --op match_bpm --dry-run
+./agent/mashpit snippet mashup.json --from-sec 13 --to-sec 37
+./agent/mashpit qc      render.wav
+./agent/mashpit undo    mashup.json
+```
+
+Notes: app + fixtures load WAV/FLAC/OGG/OPUS (no MP3 decoder in this build
+config — convert with `ffmpeg -i in.mp3 out.wav`). First full build lives
+under `mashpit-spike/` per `docs/SPIKE.md`; a clean-room rebuild is
+`upstream/sync.sh` + the same cmake flags.
 
 ## Environment (verified on this machine)
 
